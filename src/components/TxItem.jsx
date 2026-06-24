@@ -10,12 +10,23 @@ export default function TxItem({ tx, getCat, onDelete, onEdit }) {
       <div className="tx-info">
         <div className="tx-name">{tx.note || cat.name}</div>
         <div className="tx-meta">
-          <span className="cat-chip" style={{background:hexAlpha(cat.color,.16),color:cat.color}}>{cat.name}</span>
-          &nbsp;{tx.date}
+          <span
+            className="cat-chip"
+            style={{
+              background: hexAlpha(cat.color, .16),
+              color: cat.color,
+              display: 'inline-flex',
+              alignItems: 'center',
+              verticalAlign: 'middle',
+            }}
+          >
+            {cat.name}
+          </span>
+          <span style={{verticalAlign:'middle'}}>{tx.date}</span>
         </div>
       </div>
       <div className={`tx-amount ${isInc?'inc':'exp'}`}>{isInc?'+':'-'}{fmt(tx.amount)}</div>
-      <button className="tx-del" onClick={() => onDelete(tx.id)}>✕</button>
+      <button className="tx-del" onClick={() => onDelete(tx.id)} title="Eliminar">✕</button>
     </div>
   )
 }

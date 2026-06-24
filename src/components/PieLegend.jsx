@@ -7,8 +7,25 @@ export default function PieLegend({ expByCat, getCat }) {
   return (
     <div id="pie-legend">
       {items.map(({ cat, v }) => (
-        <div key={cat.id||cat.name} className="cat-chip" style={{background:hexAlpha(cat.color,.16),color:cat.color}}>
-          <span style={{display:'inline-block',width:'7px',height:'7px',borderRadius:'50%',background:cat.color}}></span>
+        <div
+          key={cat.id || cat.name}
+          className="cat-chip"
+          style={{
+            background: hexAlpha(cat.color, .16),
+            color: cat.color,
+            display: 'inline-flex',
+            alignItems: 'center',
+            verticalAlign: 'middle',
+          }}
+        >
+          <span style={{
+            display: 'inline-block',
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            background: cat.color,
+            flexShrink: 0,
+          }}></span>
           {cat.name}: {fmt(v)}
         </div>
       ))}

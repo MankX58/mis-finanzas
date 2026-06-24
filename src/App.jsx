@@ -43,6 +43,9 @@ export default function App() {
   // cat tab in categorías section
   const [catTab, setCatTab] = useState('expense')
 
+  // tracks how many times presupuesto tab has been entered, used to remount VasoChart
+  const [vasoKey, setVasoKey] = useState(0)
+
   // ─── PERSIST ───────────────────────────────────────────────────────────────
   useEffect(() => { sv('mf_tx',      transactions) }, [transactions])
   useEffect(() => { sv('mf_budgets', budgets)      }, [budgets])
@@ -171,6 +174,14 @@ export default function App() {
     setCats(prev => ({...prev, [type]: prev[type].filter(c => c.id !== id)}))
   }
 
+  // ─── TABS CONFIG ───────────────────────────────────────────────────────────
+  const TABS = [
+    { id: 'resumen',      icon: '📊', label: 'Resumen'     },
+    { id: 'movimientos',  icon: '💸', label: 'Movimientos' },
+    { id: 'presupuesto',  icon: '🎯', label: 'Presupuesto' },
+    { id: 'categorias',   icon: '🏷️', label: 'Categorías'  },
+  ]
+
   // ─── RENDER ────────────────────────────────────────────────────────────────
   return (
     <>
@@ -188,8 +199,15 @@ export default function App() {
 
       {/* TABS */}
       <div className="tabs">
-        {[['resumen','📊 Resumen'],['movimientos','💸 Movimientos'],['presupuesto','🎯 Presupuesto'],['categorias','🏷 Categorías']].map(([id,label]) => (
-          <button key={id} className={`tab ${activeTab===id?'active':''}`} onClick={() => setActiveTab(id)}>{label}</button>
+        {TABS.map(({ id, icon, label }) => (
+          <button
+            key={id}
+            className={`tab ${activeTab === id ? 'active' : ''}`}
+            onClick={() => { setActiveTab(id); if (id === 'presupuesto') setVasoKey(k => k + 1) }}
+          >
+            <span className="tab-icon">{icon}</span>
+            <span className="tab-text">{label}</span>
+          </button>
         ))}
       </div>
 
@@ -201,7 +219,7 @@ export default function App() {
           <div className="cards-row">
             <div className="card"><div className="card-label">Ingresos</div><div className="card-value g">{fmt(totalInc)}</div></div>
             <div className="card"><div className="card-label">Gastos</div><div className="card-value r">{fmt(totalExp)}</div></div>
-            <div className="card"><div className="card-label">Disponible</div><div className="card-value y">{fmt(bal)}</div></div>
+            
           </div>
           <div className="chart-card">
             <h3>Distribución de gastos</h3>
@@ -213,7 +231,7 @@ export default function App() {
           </div>
           <div className="tx-list">
             {recent.length === 0
-              ? <div className="empty"><div className="empty-icon">💳</div>Agrega tu primer movimiento con el botón +</div>
+              ? <div className="empty"><span className="empty-icon">💳</span>Agrega tu primer movimiento con el botón +</div>
               : recent.map(tx => <TxItem key={tx.id} tx={tx} getCat={getCat} onDelete={deleteTx} onEdit={openModal} />)
             }
           </div>
@@ -233,17 +251,17 @@ export default function App() {
           <div className="filter-badge">{filteredTx.length ? `${filteredTx.length} resultado${filteredTx.length!==1?'s':''}…` : ''}</div>
           <div className="tx-list">
             {filteredTx.length === 0
-              ? <div className="empty"><div className="empty-icon">🔍</div>Sin resultados para ese filtro</div>
+              ? <div className="empty"><span className="empty-icon">🔍</span>Sin resultados para ese filtro</div>
               : filteredTx.map(tx => <TxItem key={tx.id} tx={tx} getCat={getCat} onDelete={deleteTx} onEdit={openModal} />)
             }
           </div>
         </div>
 
         {/* PRESUPUESTO */}
-        <div className={`section ${activeTab==='presupuesto'?'active':''}`}>
+        <div className={`section ${activeTab === 'presupuesto' ? 'active' : ''}`} style={{ overflow: 'hidden' }}>
           <div className="chart-card">
             <h3>Presupuesto vs Gasto — vista vaso</h3>
-            <VasoChart budgets={budgets} expByCat={expByCat} getCat={getCat} />
+            <VasoChart key={vasoKey} budgets={budgets} expByCat={expByCat} getCat={getCat} />
             <div style={{display:'flex',gap:'16px',marginTop:'14px',flexWrap:'wrap'}}>
               <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'.75rem',color:'var(--muted)'}}>
                 <div style={{width:'20px',height:'3px',borderTop:'2px dashed var(--muted)'}}></div> Límite del presupuesto
@@ -259,7 +277,7 @@ export default function App() {
           </div>
           <div className="budget-list">
             {budgets.length === 0
-              ? <div className="empty"><div className="empty-icon">🎯</div>Sin presupuestos aún</div>
+              ? <div className="empty"><span className="empty-icon">🎯</span>Sin presupuestos aún</div>
               : budgets.map(b => {
                   const cat = getCat('expense', b.category)
                   const spent = expByCat[b.category] || 0
@@ -416,4 +434,3 @@ export default function App() {
     </>
   )
 }
-
