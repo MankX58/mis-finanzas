@@ -66,6 +66,12 @@ export default function Resumen({ tx, getCat, month, setMonth, card, cardTx, car
   const co = card ? cardOverview(card, cardTx, cardPaid) : null
   const nextDue = co?.due[0]
 
+  // Mes actual: lo que debes hoy en la tarjeta (solo lo tuyo, mismo número que la tarjeta de abajo y la pestaña Tarjeta).
+  // Otros meses: tus compras propias con tarjeta hechas ese mes.
+  const isNow = month === now
+  const cardOwn = isNow && co ? co.debt : cardTx.filter(t => !t.who && t.date.startsWith(month)).reduce((a, t) => a + t.amount, 0)
+  const withCard = T.bal - cardOwn
+
   const saved = T.inc > 0 ? Math.round((T.bal / T.inc) * 100) : null
   const expDelta = P.exp > 0 ? Math.round(((T.exp - P.exp) / P.exp) * 100) : null
 
@@ -85,16 +91,29 @@ export default function Resumen({ tx, getCat, month, setMonth, card, cardTx, car
       {/* Balance + tarjeta */}
       <div className="grid g21">
         <section className="panel rise" style={{ '--i': 1 }}>
-          <div className="panel-h"><h3>Balance de {monthTitle(month)}</h3>
+          <div className="panel-h"><h3>Tus cuentas de {monthTitle(month)}</h3>
             {saved !== null && <span className={`delta ${saved >= 0 ? 'good' : 'bad'}`}><PiggyBank />{saved >= 0 ? `Ahorraste el ${saved}% de lo que entró` : 'Gastaste más de lo que entró'}</span>}
           </div>
-          <div className={`display hero-num ${T.bal >= 0 ? '' : 'neg'}`}><Money value={T.bal} /></div>
+          <div className="accounts">
+            <div className="acct">
+              <span className="muted">Sin tarjeta</span>
+              <b className={`display hero-num ${T.bal >= 0 ? '' : 'neg'}`}><Money value={T.bal} /></b>
+              <small className="muted">Ingresos menos gastos</small>
+            </div>
+            <div className="acct">
+              <span className="muted">Con tarjeta</span>
+              <b className={`display hero-num ${withCard >= 0 ? '' : 'neg'}`}><Money value={withCard} /></b>
+              <small className="muted">{cardOwn > 0 ? (isNow ? 'Descontando lo que debes en la tarjeta' : 'Descontando tus compras con tarjeta del mes') : 'No debes nada en la tarjeta'}</small>
+            </div>
+          </div>
           <div className="ledger">
             <div className="lrow"><span className="lbl">Entraron</span><i className="leader" /><span className="val num pos">+{fmt(T.inc)}</span></div>
             <div className="lrow"><span className="lbl">Salieron</span><i className="leader" />
               {expDelta !== null && <span className={`delta ${expDelta <= 0 ? 'good' : 'bad'}`}>{expDelta <= 0 ? <TrendingDown /> : <TrendingUp />}{Math.abs(expDelta)}% vs {prevName}</span>}
               <span className="val num neg">−{fmt(T.exp)}</span></div>
-            <div className="lrow total"><span className="lbl">Te quedan</span><i className="leader" /><span className={`val num ${T.bal >= 0 ? 'pos' : 'neg'}`}>{fmtSigned(T.bal)}</span></div>
+            <div className="lrow total"><span className="lbl">Te quedan sin tarjeta</span><i className="leader" /><span className={`val num ${T.bal >= 0 ? 'pos' : 'neg'}`}>{fmtSigned(T.bal)}</span></div>
+            <div className="lrow"><span className="lbl">{isNow ? 'Deuda de la tarjeta · solo lo tuyo' : 'Compras con tarjeta · solo lo tuyo'}</span><i className="leader" /><span className="val num neg">−{fmt(cardOwn)}</span></div>
+            <div className="lrow total"><span className="lbl">Te quedan con tarjeta</span><i className="leader" /><span className={`val num ${withCard >= 0 ? 'pos' : 'neg'}`}>{fmtSigned(withCard)}</span></div>
           </div>
         </section>
 

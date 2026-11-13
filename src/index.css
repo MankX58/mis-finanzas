@@ -101,6 +101,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
   padding:8px 2px;border-radius:12px;color:var(--muted);font-size:.68rem;font-weight:550;
   transition:color .25s var(--ease);
 }
+.only-wide{display:none}
 .nav-item svg{width:22px;height:22px;transition:transform .4s var(--snap)}
 .nav-item:hover{color:var(--text)}
 .nav-item[aria-current=page]{color:var(--brass)}
@@ -108,7 +109,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .nav-ind{
   position:absolute;z-index:0;left:0;top:0;pointer-events:none;
   width:28px;height:3px;border-radius:0 0 4px 4px;background:var(--brass);
-  transform:translateX(calc(var(--ind-x,0px) + var(--ind-w,0px)/2 - 14px));
+  transform:translateX(calc(var(--ind-x,0px) + var(--ind-w,0px)/2 - 14px));opacity:var(--ind-o,1);
   transition:transform .55s var(--snap),opacity .3s;box-shadow:0 2px 14px 1px rgba(232,176,75,.55);
 }
 .nav-add{
@@ -141,6 +142,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
   .nav-brand span{display:none}
   .nav-item{--o:var(--o-d);flex:0 0 auto;flex-direction:column;padding:11px 0;font-size:.62rem}
   .lbl-s{display:none}.lbl-l{display:inline}
+  .only-wide{display:flex}
   .nav-ind{
     width:var(--ind-w,0);height:var(--ind-h,0);border-radius:14px;
     background:color-mix(in srgb,var(--brass) 13%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brass) 28%,transparent);
