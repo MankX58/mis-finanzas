@@ -1,436 +1,176 @@
-import { useState, useEffect } from 'react'
-import { SWATCHES, DEFAULT_CATS, fmt, today, thisMonth, ld, sv } from './finance'
-import TxItem from './components/TxItem'
-import PieChart from './components/PieChart'
-import PieLegend from './components/PieLegend'
-import VasoChart from './components/VasoChart'
-import MovementFilters from './components/MovementFilters'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Undo2 } from 'lucide-react'
+import Nav from './components/Nav'
+import { Brand, Money } from './components/ui'
+import { TxSheet, BudgetSheet, CatSheet, CardSetupSheet, CardTxSheet } from './components/Sheets'
+import Resumen from './views/Resumen'
+import Movimientos from './views/Movimientos'
+import Tarjeta from './views/Tarjeta'
+import Presupuesto from './views/Presupuesto'
+import Categorias from './views/Categorias'
+import { DEFAULT_CATS, thisMonth, monthTotals, ld, sv, peopleSummary, personKey } from './finance'
 
-// ─── APP ──────────────────────────────────────────────────────────────────────
+const NO_FILTERS = { q: '', type: '', cat: '', month: '' }
+
 export default function App() {
-  const [activeTab,    setActiveTab]    = useState('resumen')
-  const [transactions, setTransactions] = useState(() => ld('mf_tx', []))
-  const [budgets,      setBudgets]      = useState(() => ld('mf_budgets', []))
-  const [cats,         setCats]         = useState(() => ld('mf_cats', DEFAULT_CATS))
+  const [tab, setTab] = useState('resumen')
+  const [month, setMonth] = useState(thisMonth())
+  const [filters, setFilters] = useState(NO_FILTERS)
 
-  // modal states
-  const [txModal,     setTxModal]     = useState(false)
-  const [budgetModal, setBudgetModal] = useState(false)
-  const [catModal,    setCatModal]    = useState(false)
+  const [tx, setTx] = useState(() => ld('mf_tx', []))
+  const [budgets, setBudgets] = useState(() => ld('mf_budgets', []))
+  const [cats, setCats] = useState(() => ld('mf_cats', DEFAULT_CATS))
+  const [card, setCard] = useState(() => ld('mf_card', null))
+  const [cardTx, setCardTx] = useState(() => ld('mf_card_tx', []))
+  const [cardPaid, setCardPaid] = useState(() => ld('mf_card_paid', {}))
 
-  // tx form
-  const [editId,       setEditId]       = useState(null)
-  const [currentType,  setCurrentType]  = useState('income')
-  const [txAmount,     setTxAmount]     = useState('')
-  const [txCat,        setTxCat]        = useState('')
-  const [txNote,       setTxNote]       = useState('')
-  const [txDate,       setTxDate]       = useState(today())
+  // hojas: null = cerrada · { ... } = abierta
+  const [txSheet, setTxSheet] = useState(null)         // { id }
+  const [budgetSheet, setBudgetSheet] = useState(null) // { budget }
+  const [catSheet, setCatSheet] = useState(null)       // { type }
+  const [cardSheet, setCardSheet] = useState(false)
+  const [cardTxSheet, setCardTxSheet] = useState(null) // { id }
+  const [toast, setToast] = useState(null)
+  const toastTimer = useRef(0)
 
-  // budget form
-  const [budgetCat,    setBudgetCat]    = useState('')
-  const [budgetAmount, setBudgetAmount] = useState('')
+  useEffect(() => { sv('mf_tx', tx) }, [tx])
+  useEffect(() => { sv('mf_budgets', budgets) }, [budgets])
+  useEffect(() => { sv('mf_cats', cats) }, [cats])
+  useEffect(() => { sv('mf_card', card) }, [card])
+  useEffect(() => { sv('mf_card_tx', cardTx) }, [cardTx])
+  useEffect(() => { sv('mf_card_paid', cardPaid) }, [cardPaid])
+  useEffect(() => { window.scrollTo({ top: 0 }) }, [tab])
 
-  // cat form
-  const [currentCatType, setCurrentCatType] = useState('expense')
-  const [catName,        setCatName]        = useState('')
-  const [catColor,       setCatColor]       = useState('#82b4f5')
+  const getCat = useCallback((type, id) => cats[type]?.find(c => c.id === id) || { id, name: 'Sin categoría', color: '#8c919b' }, [cats])
+  const people = useMemo(() => peopleSummary(cardTx), [cardTx])
+  const balance = useMemo(() => monthTotals(tx, thisMonth()).bal, [tx])
 
-  // filters
-  const [fSearch, setFSearch] = useState('')
-  const [fType,   setFType]   = useState('')
-  const [fCat,    setFCat]    = useState('')
-
-  // cat tab in categorías section
-  const [catTab, setCatTab] = useState('expense')
-
-  // tracks how many times presupuesto tab has been entered, used to remount VasoChart
-  const [vasoKey, setVasoKey] = useState(0)
-
-  // ─── PERSIST ───────────────────────────────────────────────────────────────
-  useEffect(() => { sv('mf_tx',      transactions) }, [transactions])
-  useEffect(() => { sv('mf_budgets', budgets)      }, [budgets])
-  useEffect(() => { sv('mf_cats',    cats)          }, [cats])
-
-  useEffect(() => {
-    if (!fCat) return
-    const allowedCats = fType ? (cats[fType] || []) : [...(cats.income || []), ...(cats.expense || [])]
-    if (!allowedCats.some(c => c.id === fCat)) setFCat('')
-  }, [fType, cats, fCat])
-
-  // ─── DERIVED ───────────────────────────────────────────────────────────────
-  const getCat = (type, id) => cats[type]?.find(c => c.id === id) || {name: id, color:'#8888a0'}
-
-  const month = thisMonth()
-  const mTx   = transactions.filter(t => t.date.startsWith(month))
-  const totalInc  = mTx.filter(t => t.type === 'income').reduce((a,t) => a+t.amount, 0)
-  const totalExp  = mTx.filter(t => t.type === 'expense').reduce((a,t) => a+t.amount, 0)
-  const bal       = totalInc - totalExp
-
-  const expByCat = {}
-  mTx.filter(t => t.type === 'expense').forEach(t => {
-    expByCat[t.category] = (expByCat[t.category] || 0) + t.amount
-  })
-
-  const recent = [...transactions].sort((a,b) => b.date.localeCompare(a.date)).slice(0,5)
-
-  // filtered movimientos
-  const filteredTx = [...transactions]
-    .sort((a,b) => b.date.localeCompare(a.date))
-    .filter(t => !fType || t.type === fType)
-    .filter(t => !fCat  || t.category === fCat)
-    .filter(t => {
-      if (!fSearch) return true
-      const q = fSearch.toLowerCase()
-      const c = getCat(t.type, t.category)
-      return (t.note||'').toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
-    })
-
-  // ─── TX MODAL ──────────────────────────────────────────────────────────────
-  function openModal(id = null) {
-    setEditId(id)
-    if (id) {
-      const tx = transactions.find(t => t.id === id)
-      setCurrentType(tx.type)
-      setTxAmount(tx.amount)
-      setTxNote(tx.note)
-      setTxDate(tx.date)
-      setTxCat(tx.category)
-    } else {
-      setCurrentType('income')
-      setTxAmount('')
-      setTxNote('')
-      setTxDate(today())
-      const firstCat = cats['income']?.[0]?.id || ''
-      setTxCat(firstCat)
-    }
-    setTxModal(true)
+  const say = (msg, undo) => {
+    clearTimeout(toastTimer.current)
+    setToast({ msg, undo, n: Date.now() })
+    toastTimer.current = setTimeout(() => setToast(null), 6000)
+  }
+  const goTo = (t, patch) => {
+    if (t === 'movimientos') setFilters({ ...NO_FILTERS, ...(patch || {}) })
+    setTab(t)
   }
 
-  function handleSetType(t) {
-    setCurrentType(t)
-    const firstCat = cats[t]?.[0]?.id || ''
-    setTxCat(firstCat)
+  // ─── movimientos ───────────────────────────────────────────────────────────
+  const saveTx = t => {
+    if (t.id) setTx(p => p.map(x => (x.id === t.id ? { ...x, ...t } : x)))
+    else setTx(p => [...p, { ...t, id: Date.now().toString() }])
+    setTxSheet(null)
+    say(t.id ? 'Movimiento actualizado' : 'Movimiento guardado')
+  }
+  const deleteTx = id => {
+    const gone = tx.find(t => t.id === id)
+    setTx(p => p.filter(t => t.id !== id))
+    setTxSheet(null)
+    say('Movimiento eliminado', () => setTx(p => [...p, gone]))
   }
 
-  function saveTx() {
-    const amount = parseFloat(txAmount)
-    if (!amount || amount <= 0) { alert('Ingresa un monto válido.'); return }
-    if (editId) {
-      setTransactions(prev => prev.map(t => t.id === editId ? {...t, type:currentType, amount, category:txCat, note:txNote, date:txDate} : t))
-      setEditId(null)
-    } else {
-      setTransactions(prev => [...prev, {id: Date.now().toString(), type:currentType, amount, category:txCat, note:txNote, date:txDate}])
-    }
-    setTxModal(false)
+  // ─── presupuestos ──────────────────────────────────────────────────────────
+  const saveBudget = ({ category, amount }) => {
+    setBudgets(p => p.some(b => b.category === category)
+      ? p.map(b => (b.category === category ? { ...b, amount } : b))
+      : [...p, { id: Date.now().toString(), category, amount }])
+    setBudgetSheet(null)
+    say('Presupuesto guardado')
+  }
+  const deleteBudget = id => {
+    const gone = budgets.find(b => b.id === id)
+    setBudgets(p => p.filter(b => b.id !== id))
+    say('Presupuesto eliminado', () => setBudgets(p => [...p, gone]))
   }
 
-  function deleteTx(id) {
-    setTransactions(prev => prev.filter(t => t.id !== id))
+  // ─── categorías ────────────────────────────────────────────────────────────
+  const saveCat = ({ type, name, color }) => {
+    setCats(p => ({ ...p, [type]: [...(p[type] || []), { id: 'c' + Date.now(), name, color }] }))
+    setCatSheet(null)
+    say(`Categoría «${name}» creada`)
+  }
+  const deleteCat = (type, id) => {
+    const gone = cats[type].find(c => c.id === id)
+    const used = tx.filter(t => t.type === type && t.category === id).length
+    setCats(p => ({ ...p, [type]: p[type].filter(c => c.id !== id) }))
+    say(used ? `«${gone.name}» eliminada · ${used} movimiento${used > 1 ? 's' : ''} quedan sin categoría` : `«${gone.name}» eliminada`,
+      () => setCats(p => ({ ...p, [type]: [...p[type], gone] })))
   }
 
-  // ─── BUDGET MODAL ──────────────────────────────────────────────────────────
-  function openBudgetModal() {
-    setBudgetCat(cats.expense[0]?.id || '')
-    setBudgetAmount('')
-    setBudgetModal(true)
+  // ─── tarjeta ───────────────────────────────────────────────────────────────
+  const saveCard = c => { setCard(c); setCardSheet(false); say('Tarjeta guardada') }
+  const saveCardTx = t => {
+    const known = people.find(p => p.key === personKey(t.who))
+    const who = known ? known.name : t.who                        // «mamá» y «Mamá» son la misma persona
+    if (t.id) setCardTx(p => p.map(x => (x.id === t.id ? { ...x, ...t, who } : x)))
+    else setCardTx(p => [...p, { ...t, who, id: Date.now().toString() }])
+    setCardTxSheet(null)
+    say(t.id ? 'Compra actualizada' : t.who ? `Anotado: ${who} te debe esta compra` : 'Compra guardada')
+  }
+  const deleteCardTx = id => {
+    const gone = cardTx.find(t => t.id === id)
+    setCardTx(p => p.filter(t => t.id !== id))
+    setCardTxSheet(null)
+    say('Compra eliminada', () => setCardTx(p => [...p, gone]))
+  }
+  const toggleSettled = id => setCardTx(p => p.map(t => (t.id === id ? { ...t, settled: !t.settled } : t)))
+  const settlePerson = (key, value) => {
+    setCardTx(p => p.map(t => (personKey(t.who) === key ? { ...t, settled: value } : t)))
+    say(value ? 'Cuentas saldadas ✓' : 'Cuentas reabiertas')
+  }
+  const togglePaid = cut => {
+    const wasPaid = !!cardPaid[cut]
+    setCardPaid(p => ({ ...p, [cut]: !wasPaid }))
+    say(wasPaid ? 'Ciclo reabierto' : 'Ciclo marcado como pagado', () => setCardPaid(p => ({ ...p, [cut]: wasPaid })))
   }
 
-  function saveBudget() {
-    const amount = parseFloat(budgetAmount)
-    if (!amount || amount <= 0) { alert('Ingresa un monto válido.'); return }
-    setBudgets(prev => {
-      const i = prev.findIndex(b => b.category === budgetCat)
-      if (i > -1) return prev.map((b,idx) => idx === i ? {...b, amount} : b)
-      return [...prev, {id: Date.now().toString(), category: budgetCat, amount}]
-    })
-    setBudgetModal(false)
-  }
+  // El botón "+" entiende la pantalla en la que estás.
+  const addAction = {
+    tarjeta:     { label: 'Compra con tarjeta', run: () => (card ? setCardTxSheet({ id: null }) : setCardSheet(true)) },
+    presupuesto: { label: 'Nuevo presupuesto',  run: () => setBudgetSheet({ budget: null }) },
+    categorias:  { label: 'Nueva categoría',    run: () => setCatSheet({ type: 'expense' }) },
+  }[tab] || { label: 'Nuevo movimiento', run: () => setTxSheet({ id: null }) }
 
-  function deleteBudget(id) {
-    setBudgets(prev => prev.filter(b => b.id !== id))
-  }
+  const editingTx = txSheet?.id ? tx.find(t => t.id === txSheet.id) : null
+  const editingCardTx = cardTxSheet?.id ? cardTx.find(t => t.id === cardTxSheet.id) : null
 
-  // ─── CAT MODAL ─────────────────────────────────────────────────────────────
-  function openCatModal() {
-    setCurrentCatType(catTab || 'expense')
-    setCatName('')
-    setCatColor('#82b4f5')
-    setCatModal(true)
-  }
-
-  function saveCat() {
-    if (!catName.trim()) { alert('Ingresa un nombre.'); return }
-    const id = 'c' + Date.now()
-    setCats(prev => ({
-      ...prev,
-      [currentCatType]: [...(prev[currentCatType] || []), {id, name: catName.trim(), color: catColor}]
-    }))
-    setCatModal(false)
-  }
-
-  function deleteCat(type, id) {
-    const used = transactions.some(t => t.type === type && t.category === id)
-    if (used && !confirm('Esta categoría tiene movimientos. ¿Eliminar de todas formas?')) return
-    setCats(prev => ({...prev, [type]: prev[type].filter(c => c.id !== id)}))
-  }
-
-  // ─── TABS CONFIG ───────────────────────────────────────────────────────────
-  const TABS = [
-    { id: 'resumen',      icon: '📊', label: 'Resumen'     },
-    { id: 'movimientos',  icon: '💸', label: 'Movimientos' },
-    { id: 'presupuesto',  icon: '🎯', label: 'Presupuesto' },
-    { id: 'categorias',   icon: '🏷️', label: 'Categorías'  },
-  ]
-
-  // ─── RENDER ────────────────────────────────────────────────────────────────
   return (
-    <>
-      {/* HEADER */}
-      <div className="header">
-        <div>
-          <h1>Mis Finanzas</h1>
-          <p>Ingresos, gastos y presupuestos en un solo lugar</p>
-        </div>
-        <div className="header-right">
-          <div className="bal-label">Balance mes</div>
-          <div className={`bal-val ${bal >= 0 ? 'pos' : 'neg'}`}>{fmt(bal)}</div>
-        </div>
+    <div className="app">
+      <div className="topbar">
+        <Brand size={30} /><span className="brand-name">Mis Finanzas</span>
+        <span className="chip-bal num"><span className="muted">Mes</span><b className={balance >= 0 ? 'pos' : 'neg'}><Money value={balance} /></b></span>
       </div>
+      <Nav active={tab} onChange={setTab} onAdd={addAction.run} addLabel={addAction.label} month={thisMonth()} balance={balance} />
 
-      {/* TABS */}
-      <div className="tabs">
-        {TABS.map(({ id, icon, label }) => (
-          <button
-            key={id}
-            className={`tab ${activeTab === id ? 'active' : ''}`}
-            onClick={() => { setActiveTab(id); if (id === 'presupuesto') setVasoKey(k => k + 1) }}
-          >
-            <span className="tab-icon">{icon}</span>
-            <span className="tab-text">{label}</span>
-          </button>
-        ))}
+      <main className="main">
+        <div key={tab}>
+          {tab === 'resumen' && <Resumen tx={tx} getCat={getCat} month={month} setMonth={setMonth} card={card} cardTx={cardTx} cardPaid={cardPaid}
+            goTo={goTo} onEdit={id => setTxSheet({ id })} onDelete={deleteTx} onAdd={() => setTxSheet({ id: null })} />}
+          {tab === 'movimientos' && <Movimientos tx={tx} cats={cats} getCat={getCat} filters={filters} setFilters={setFilters}
+            onEdit={id => setTxSheet({ id })} onDelete={deleteTx} onAdd={() => setTxSheet({ id: null })} />}
+          {tab === 'tarjeta' && <Tarjeta card={card} cardTx={cardTx} cardPaid={cardPaid} getCat={getCat}
+            onSetup={() => setCardSheet(true)} onAdd={() => setCardTxSheet({ id: null })} onEdit={id => setCardTxSheet({ id })} onDelete={deleteCardTx}
+            onToggleSettled={toggleSettled} onSettlePerson={settlePerson} onTogglePaid={togglePaid} />}
+          {tab === 'presupuesto' && <Presupuesto tx={tx} budgets={budgets} getCat={getCat} month={month} setMonth={setMonth}
+            onNew={() => setBudgetSheet({ budget: null })} onEdit={b => setBudgetSheet({ budget: b })} onDelete={deleteBudget} />}
+          {tab === 'categorias' && <Categorias cats={cats} tx={tx} onNew={type => setCatSheet({ type })} onDelete={deleteCat} />}
+        </div>
+      </main>
+
+      <TxSheet open={!!txSheet} onClose={() => setTxSheet(null)} tx={editingTx} cats={cats} onSave={saveTx} onDelete={deleteTx} />
+      <BudgetSheet open={!!budgetSheet} onClose={() => setBudgetSheet(null)} budget={budgetSheet?.budget} cats={cats} onSave={saveBudget} />
+      <CatSheet open={!!catSheet} onClose={() => setCatSheet(null)} initialType={catSheet?.type} onSave={saveCat} />
+      <CardSetupSheet open={cardSheet} onClose={() => setCardSheet(false)} card={card} onSave={saveCard} />
+      {card && <CardTxSheet open={!!cardTxSheet} onClose={() => setCardTxSheet(null)} tx={editingCardTx} card={card} cats={cats} people={people} onSave={saveCardTx} onDelete={deleteCardTx} />}
+
+      <div className="toasts" aria-live="polite">
+        {toast && (
+          <div className="toast" key={toast.n}>
+            <span>{toast.msg}</span>
+            {toast.undo && <button onClick={() => { toast.undo(); setToast(null) }}><Undo2 size={15} style={{ verticalAlign: '-2px', marginRight: 5 }} />Deshacer</button>}
+          </div>
+        )}
       </div>
-
-      {/* MAIN */}
-      <div className="main">
-
-        {/* RESUMEN */}
-        <div className={`section ${activeTab==='resumen'?'active':''}`}>
-          <div className="cards-row">
-            <div className="card"><div className="card-label">Ingresos</div><div className="card-value g">{fmt(totalInc)}</div></div>
-            <div className="card"><div className="card-label">Gastos</div><div className="card-value r">{fmt(totalExp)}</div></div>
-            
-          </div>
-          <div className="chart-card">
-            <h3>Distribución de gastos</h3>
-            <div className="pie-wrap"><PieChart expByCat={expByCat} getCat={getCat} /></div>
-            <PieLegend expByCat={expByCat} getCat={getCat} />
-          </div>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
-            <span style={{fontSize:'.88rem',fontWeight:600,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.6px'}}>Últimos movimientos</span>
-          </div>
-          <div className="tx-list">
-            {recent.length === 0
-              ? <div className="empty"><span className="empty-icon">💳</span>Agrega tu primer movimiento con el botón +</div>
-              : recent.map(tx => <TxItem key={tx.id} tx={tx} getCat={getCat} onDelete={deleteTx} onEdit={openModal} />)
-            }
-          </div>
-        </div>
-
-        {/* MOVIMIENTOS */}
-        <div className={`section ${activeTab==='movimientos'?'active':''}`}>
-          <MovementFilters
-            search={fSearch}
-            type={fType}
-            category={fCat}
-            categories={cats}
-            onSearchChange={setFSearch}
-            onTypeChange={setFType}
-            onCategoryChange={setFCat}
-          />
-          <div className="filter-badge">{filteredTx.length ? `${filteredTx.length} resultado${filteredTx.length!==1?'s':''}…` : ''}</div>
-          <div className="tx-list">
-            {filteredTx.length === 0
-              ? <div className="empty"><span className="empty-icon">🔍</span>Sin resultados para ese filtro</div>
-              : filteredTx.map(tx => <TxItem key={tx.id} tx={tx} getCat={getCat} onDelete={deleteTx} onEdit={openModal} />)
-            }
-          </div>
-        </div>
-
-        {/* PRESUPUESTO */}
-        <div className={`section ${activeTab === 'presupuesto' ? 'active' : ''}`} style={{ overflow: 'hidden' }}>
-          <div className="chart-card">
-            <h3>Presupuesto vs Gasto — vista vaso</h3>
-            <VasoChart key={vasoKey} budgets={budgets} expByCat={expByCat} getCat={getCat} />
-            <div style={{display:'flex',gap:'16px',marginTop:'14px',flexWrap:'wrap'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'.75rem',color:'var(--muted)'}}>
-                <div style={{width:'20px',height:'3px',borderTop:'2px dashed var(--muted)'}}></div> Límite del presupuesto
-              </div>
-              <div style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'.75rem',color:'var(--muted)'}}>
-                <div style={{width:'14px',height:'10px',background:'var(--muted)',borderRadius:'2px',opacity:.5}}></div> Gastado
-              </div>
-            </div>
-          </div>
-          <div className="budget-header">
-            <h3>Mis presupuestos</h3>
-            <button className="btn-sm" onClick={openBudgetModal}>+ Nuevo</button>
-          </div>
-          <div className="budget-list">
-            {budgets.length === 0
-              ? <div className="empty"><span className="empty-icon">🎯</span>Sin presupuestos aún</div>
-              : budgets.map(b => {
-                  const cat = getCat('expense', b.category)
-                  const spent = expByCat[b.category] || 0
-                  const pct = Math.min(spent / b.amount * 100, 100)
-                  const over = spent > b.amount
-                  return (
-                    <div key={b.id} className="budget-item">
-                      <div className="budget-item-top">
-                        <div className="budget-cat"><div className="bdot" style={{background:cat.color}}></div>{cat.name}</div>
-                        <div style={{display:'flex',alignItems:'center',gap:'9px'}}>
-                          <div className="budget-amounts">{fmt(spent)} <span style={{color:cat.color}}>/ {fmt(b.amount)}</span></div>
-                          <button className="budget-del" onClick={() => deleteBudget(b.id)}>✕</button>
-                        </div>
-                      </div>
-                      <div className="budget-bar-bg">
-                        <div className={`budget-bar-fill ${over?'over':''}`} style={{width:`${pct}%`,background:cat.color}}></div>
-                      </div>
-                      <div className="budget-pct" style={{color:over?'#f28b82':'#8888a0'}}>
-                        {over ? '⚠ Límite superado' : `${pct.toFixed(0)}% usado`}
-                      </div>
-                    </div>
-                  )
-                })
-            }
-          </div>
-        </div>
-
-        {/* CATEGORÍAS */}
-        <div className={`section ${activeTab==='categorias'?'active':''}`}>
-          <div className="chart-card" style={{marginBottom:0}}>
-            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'14px'}}>
-              <h3 style={{margin:0}}>Gestionar categorías</h3>
-              <button className="btn-sm" onClick={openCatModal}>+ Nueva categoría</button>
-            </div>
-            <div className="cat-tabs">
-              <button className={`cat-tab ${catTab==='expense'?'active':''}`} onClick={() => setCatTab('expense')}>Gastos</button>
-              <button className={`cat-tab ${catTab==='income'?'active':''}`}  onClick={() => setCatTab('income')}>Ingresos</button>
-            </div>
-            <div className="cat-grid">
-              {(cats[catTab]||[]).length === 0
-                ? <div style={{color:'var(--muted)',fontSize:'.84rem'}}>Sin categorías. Crea una con el botón +</div>
-                : (cats[catTab]||[]).map(c => (
-                    <div key={c.id} className="cat-pill">
-                      <div className="cat-pill-dot" style={{background:c.color}}></div>
-                      {c.name}
-                      <button className="cat-pill-del" onClick={() => deleteCat(catTab, c.id)} title="Eliminar">✕</button>
-                    </div>
-                  ))
-              }
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* FAB */}
-      <button className="fab" onClick={() => openModal()}>+</button>
-
-      {/* MODAL MOVIMIENTO */}
-      {txModal && (
-        <div className="overlay open" onClick={e => { if(e.target.classList.contains('overlay')) setTxModal(false) }}>
-          <div className="modal">
-            <h2>{editId ? 'Editar movimiento' : 'Nuevo movimiento'}</h2>
-            <div className="fg">
-              <label>Tipo</label>
-              <div className="type-toggle">
-                <button className={`type-btn ${currentType==='income'?'ai':''}`} onClick={() => handleSetType('income')}>↑ Ingreso</button>
-                <button className={`type-btn ${currentType==='expense'?'ae':''}`} onClick={() => handleSetType('expense')}>↓ Gasto</button>
-              </div>
-            </div>
-            <div className="fg">
-              <label>Monto (COP $)</label>
-              <input type="number" placeholder="0" min="0" step="100" value={txAmount} onChange={e => setTxAmount(e.target.value)} />
-            </div>
-            <div className="fg">
-              <label>Categoría</label>
-              <select value={txCat} onChange={e => setTxCat(e.target.value)}>
-                {(cats[currentType]||[]).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div className="fg">
-              <label>Nota (opcional)</label>
-              <textarea placeholder="Descripción del movimiento…" value={txNote} onChange={e => setTxNote(e.target.value)} />
-            </div>
-            <div className="fg">
-              <label>Fecha</label>
-              <input type="date" value={txDate} onChange={e => setTxDate(e.target.value)} />
-            </div>
-            <div className="form-actions">
-              <button className="btn-cancel" onClick={() => setTxModal(false)}>Cancelar</button>
-              <button className="btn-save" onClick={saveTx}>Guardar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL PRESUPUESTO */}
-      {budgetModal && (
-        <div className="overlay open" onClick={e => { if(e.target.classList.contains('overlay')) setBudgetModal(false) }}>
-          <div className="modal">
-            <h2>Nuevo presupuesto</h2>
-            <div className="fg">
-              <label>Categoría de gasto</label>
-              <select value={budgetCat} onChange={e => setBudgetCat(e.target.value)}>
-                {cats.expense.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div className="fg">
-              <label>Límite mensual (COP $)</label>
-              <input type="number" placeholder="0" min="0" step="1000" value={budgetAmount} onChange={e => setBudgetAmount(e.target.value)} />
-            </div>
-            <div className="form-actions">
-              <button className="btn-cancel" onClick={() => setBudgetModal(false)}>Cancelar</button>
-              <button className="btn-save" onClick={saveBudget}>Guardar</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL CATEGORÍA */}
-      {catModal && (
-        <div className="overlay open" onClick={e => { if(e.target.classList.contains('overlay')) setCatModal(false) }}>
-          <div className="modal">
-            <h2>Nueva categoría</h2>
-            <div className="fg">
-              <label>Tipo</label>
-              <div className="type-toggle">
-                <button className={`type-btn ${currentCatType==='income'?'ai':''}`} onClick={() => setCurrentCatType('income')}>↑ Ingreso</button>
-                <button className={`type-btn ${currentCatType==='expense'?'ae':''}`} onClick={() => setCurrentCatType('expense')}>↓ Gasto</button>
-              </div>
-            </div>
-            <div className="fg">
-              <label>Nombre</label>
-              <input type="text" placeholder="Ej: Suscripciones" value={catName} onChange={e => setCatName(e.target.value)} />
-            </div>
-            <div className="fg">
-              <label>Color</label>
-              <div className="color-row">
-                <input type="color" value={catColor} onChange={e => setCatColor(e.target.value)} />
-                <div className="color-swatches">
-                  {SWATCHES.map(c => (
-                    <div key={c} className={`swatch ${c.toLowerCase()===catColor.toLowerCase()?'sel':''}`} style={{background:c}} onClick={() => setCatColor(c)} />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="form-actions">
-              <button className="btn-cancel" onClick={() => setCatModal(false)}>Cancelar</button>
-              <button className="btn-save" onClick={saveCat}>Crear</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   )
 }
