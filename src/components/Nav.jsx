@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from 'react'
-import { LayoutDashboard, ReceiptText, CreditCard, Target, Tags, Plus } from 'lucide-react'
+import { LayoutDashboard, ReceiptText, CreditCard, Target, Settings, Plus } from 'lucide-react'
 import { Brand, Money } from './ui'
 import { monthName } from '../finance'
 import AppSwitcher from './AppSwitcher'
@@ -9,7 +9,7 @@ export const TABS = [
   { id: 'movimientos', label: 'Movimientos',  short: 'Movs.',   Icon: ReceiptText },
   { id: 'tarjeta',     label: 'Tarjeta',      short: 'Tarjeta', Icon: CreditCard },
   { id: 'presupuesto', label: 'Presupuesto',  short: 'Presup.', Icon: Target },
-  { id: 'categorias',  label: 'Categorías',   short: 'Categ.',  Icon: Tags },
+  { id: 'ajustes',     label: 'Ajustes',      short: 'Ajustes', Icon: Settings },
 ]
 
 /** Una sola barra que cambia de forma: inferior (móvil), riel (tablet) o lateral (PC).
@@ -21,7 +21,7 @@ export default function Nav({ active, onChange, onAdd, addLabel, month, balance 
     const nav = ref.current
     const place = () => {
       const el = nav.querySelector('.nav-item[aria-current=page]')
-      nav.style.setProperty('--ind-o', el && el.offsetWidth ? 1 : 0)   // pestaña oculta en móvil (Categorías): sin indicador
+      nav.style.setProperty('--ind-o', el && el.offsetWidth ? 1 : 0)   // pestaña oculta en móvil (Ajustes): sin indicador
       if (!el || !el.offsetWidth) return
       nav.style.setProperty('--ind-x', el.offsetLeft + 'px')
       nav.style.setProperty('--ind-y', el.offsetTop + 'px')

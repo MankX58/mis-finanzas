@@ -171,7 +171,7 @@
   transition:transform .4s var(--snap),border-color .25s}
 .cardwidget:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--brass) 45%,var(--line))}
 .cw-ico{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:color-mix(in srgb,var(--brass) 14%,transparent);color:var(--brass)}
-.cw-amt{font-size:clamp(2.2rem,7vw,2.8rem);line-height:1.05}
+.cw-amt{font-size:clamp(1.9rem,6vw,2.4rem);line-height:1.05}
 .cw-go{margin-top:6px;display:inline-flex;gap:6px;align-items:center;color:var(--brass);font-weight:650;font-size:.86rem}
 .cw-go svg{width:16px;height:16px;transition:transform .35s var(--snap)}
 .cardwidget:hover .cw-go svg{transform:translateX(5px)}
@@ -203,7 +203,7 @@
 .ccard-foot>svg{margin-left:auto}
 .ccard-edit{position:absolute;top:8px;right:max(8px,calc(50% - 212px));z-index:2;background:rgba(0,0,0,.25);color:#e8dfcb}
 .debt{margin-top:16px;display:flex;flex-direction:column;gap:5px}
-.debt b{font-size:2.4rem;line-height:1.1}
+.debt b{font-size:2rem;line-height:1.1}
 .debt small{font-size:.8rem}
 .limit{margin-top:10px;display:flex;flex-direction:column;gap:8px}
 .cyclehead{display:flex;align-items:center;gap:6px 6px;flex-wrap:wrap;margin-bottom:20px}
@@ -215,7 +215,7 @@
   border:1px solid color-mix(in srgb,var(--sc) 38%,var(--line));background:color-mix(in srgb,var(--sc) 9%,var(--ink-2))}
 .status.warn{--sc:var(--warn)}.status.bad{--sc:var(--expense)}.status.good{--sc:var(--income)}
 .paynow{display:flex;flex-direction:column;margin-bottom:20px}
-.paynow b{font-size:clamp(2.7rem,9vw,3.7rem);line-height:1.05}
+.paynow b{font-size:clamp(2.2rem,7vw,3rem);line-height:1.05}
 .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:9px}
 .lrow .lbl{display:inline-flex;align-items:center}
 
@@ -259,3 +259,14 @@
   .accounts{grid-template-columns:1fr 1fr;gap:0}
   .acct+.acct{border-top:0;padding-top:0;border-left:1px solid var(--line);padding-left:24px}
 }
+
+/* ─── ajustes ─── */
+.account{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:28px}
+.account .avatar{width:44px;height:44px;font-size:1.1rem;color:var(--brass-ink)}
+.grad-brass{background:linear-gradient(160deg,#f3c46a,#d9972f)}
+.account-info{flex:1;min-width:0;display:flex;flex-direction:column}
+.account-info span{font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.section-h{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.section-h h2{font-size:1.15rem}
+.section-h p{font-size:.82rem;margin-top:2px}
+.section-h .spacer{flex:1}

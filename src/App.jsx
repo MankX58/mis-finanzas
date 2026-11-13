@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Undo2, Tags, LogOut } from 'lucide-react'
+import { Undo2, Settings } from 'lucide-react'
 import Nav from './components/Nav'
 import AppSwitcher from './components/AppSwitcher'
 import { Brand, Money } from './components/ui'
@@ -8,12 +8,12 @@ import Resumen from './views/Resumen'
 import Movimientos from './views/Movimientos'
 import Tarjeta from './views/Tarjeta'
 import Presupuesto from './views/Presupuesto'
-import Categorias from './views/Categorias'
+import Ajustes from './views/Ajustes'
 import { thisMonth, monthTotals, peopleSummary, personKey } from './finance'
 
 const NO_FILTERS = { q: '', type: '', cat: '', month: '' }
 
-export default function App({ initial, onChange, onSignOut }) {
+export default function App({ user, initial, onChange, onSignOut }) {
   const [tab, setTab] = useState('resumen')
   const [month, setMonth] = useState(thisMonth())
   const [filters, setFilters] = useState(NO_FILTERS)
@@ -128,7 +128,7 @@ export default function App({ initial, onChange, onSignOut }) {
   const addAction = {
     tarjeta:     { label: 'Compra con tarjeta', run: () => (card ? setCardTxSheet({ id: null }) : setCardSheet(true)) },
     presupuesto: { label: 'Nuevo presupuesto',  run: () => setBudgetSheet({ budget: null }) },
-    categorias:  { label: 'Nueva categoría',    run: () => setCatSheet({ type: 'expense' }) },
+    ajustes:     { label: 'Nueva categoría',    run: () => setCatSheet({ type: 'expense' }) },
   }[tab] || { label: 'Nuevo movimiento', run: () => setTxSheet({ id: null }) }
 
   const editingTx = txSheet?.id ? tx.find(t => t.id === txSheet.id) : null
@@ -139,8 +139,7 @@ export default function App({ initial, onChange, onSignOut }) {
       <div className="topbar">
         <Brand size={30} /><AppSwitcher />
         <span className="chip-bal num"><span className="muted">Mes</span><b className={balance >= 0 ? 'pos' : 'neg'}><Money value={balance} /></b></span>
-        <button className="icon-btn" onClick={() => setTab('categorias')} aria-label="Categorías" title="Categorías"><Tags /></button>
-        <button className="icon-btn" onClick={onSignOut} aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut /></button>
+        <button className="icon-btn" onClick={() => setTab('ajustes')} aria-label="Ajustes" title="Ajustes" aria-pressed={tab === 'ajustes'}><Settings /></button>
       </div>
       <Nav active={tab} onChange={setTab} onAdd={addAction.run} addLabel={addAction.label} month={thisMonth()} balance={balance} />
 
@@ -155,7 +154,7 @@ export default function App({ initial, onChange, onSignOut }) {
             onToggleSettled={toggleSettled} onSettlePerson={settlePerson} onTogglePaid={togglePaid} />}
           {tab === 'presupuesto' && <Presupuesto tx={tx} budgets={budgets} getCat={getCat} month={month} setMonth={setMonth}
             onNew={() => setBudgetSheet({ budget: null })} onEdit={b => setBudgetSheet({ budget: b })} onDelete={deleteBudget} />}
-          {tab === 'categorias' && <Categorias cats={cats} tx={tx} onNew={type => setCatSheet({ type })} onDelete={deleteCat} />}
+          {tab === 'ajustes' && <Ajustes user={user} onSignOut={onSignOut} cats={cats} tx={tx} onNew={type => setCatSheet({ type })} onDelete={deleteCat} />}
         </div>
       </main>
 

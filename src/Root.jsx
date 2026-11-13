@@ -15,11 +15,11 @@ export default function Root() {
   const uid = data?.user?.id
   if (isPending) return <Splash />
   if (!uid) return <SignIn />
-  return <UserApp key={uid} uid={uid} />
+  return <UserApp key={uid} uid={uid} user={data.user} />
 }
 
 // ponytail: último en escribir gana sobre el documento entero; merge por campo si dos dispositivos editan a la vez.
-function UserApp({ uid }) {
+function UserApp({ uid, user }) {
   const cacheKey = `mf:${uid}`, pendingKey = `mf:pending:${uid}`
   const [initial, setInitial] = useState(null)
   const timer = useRef(0), latest = useRef(null)
@@ -54,5 +54,5 @@ function UserApp({ uid }) {
     await authClient.signOut()
   }
 
-  return initial ? <App initial={initial} onChange={onChange} onSignOut={onSignOut} /> : <Splash />
+  return initial ? <App user={user} initial={initial} onChange={onChange} onSignOut={onSignOut} /> : <Splash />
 }

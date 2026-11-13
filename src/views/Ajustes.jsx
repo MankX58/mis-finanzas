@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
-import { Plus, Tags, Trash2 } from 'lucide-react'
+import { LogOut, Plus, Tags, Trash2 } from 'lucide-react'
 import MonthHead from '../components/MonthHead'
 import { Empty, Seg } from '../components/ui'
 import { fmt, hexAlpha, thisMonth } from '../finance'
 
-export default function Categorias({ cats, tx, onNew, onDelete }) {
+export default function Ajustes({ user, onSignOut, cats, tx, onNew, onDelete }) {
   const [tab, setTab] = useState('expense')
   const month = thisMonth()
   const stats = useMemo(() => {
@@ -21,12 +21,25 @@ export default function Categorias({ cats, tx, onNew, onDelete }) {
 
   return (
     <div className="view">
-      <MonthHead title="Categorías" sub="Ponles nombre y color a tus ingresos y gastos.">
-        <button className="btn btn-brass" onClick={() => onNew(tab)}><Plus />Nueva categoría</button>
-      </MonthHead>
+      <MonthHead title="Ajustes" sub="Tu cuenta y tus categorías." />
 
-      <div className="rise" style={{ '--i': 1, marginBottom: 16 }}>
+      <section className="panel account rise" style={{ '--i': 1 }}>
+        <span className="avatar grad-brass">{(user.name || user.email || '?').trim().charAt(0).toUpperCase()}</span>
+        <div className="account-info">
+          <b>{user.name || 'Tu cuenta'}</b>
+          <span className="muted">{user.email}</span>
+        </div>
+        <button className="btn btn-danger btn-sm" onClick={onSignOut}><LogOut />Cerrar sesión</button>
+      </section>
+
+      <div className="section-h rise" style={{ '--i': 2 }}>
+        <div>
+          <h2>Categorías</h2>
+          <p className="muted">Ponles nombre y color a tus ingresos y gastos.</p>
+        </div>
+        <span className="spacer" />
         <Seg label="Tipo de categoría" value={tab} onChange={setTab} options={[{ value: 'expense', label: 'Gastos', cls: 'exp' }, { value: 'income', label: 'Ingresos', cls: 'inc' }]} />
+        <button className="btn btn-brass btn-sm" onClick={() => onNew(tab)}><Plus />Nueva</button>
       </div>
 
       {list.length === 0 ? (
