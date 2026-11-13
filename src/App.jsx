@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Undo2, Tags } from 'lucide-react'
 import Nav from './components/Nav'
+import AppSwitcher from './components/AppSwitcher'
 import { Brand, Money } from './components/ui'
 import { TxSheet, BudgetSheet, CatSheet, CardSetupSheet, CardTxSheet } from './components/Sheets'
 import Resumen from './views/Resumen'
@@ -137,7 +138,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="topbar">
-        <Brand size={30} /><span className="brand-name">Mis Finanzas</span>
+        <Brand size={30} /><AppSwitcher />
         <span className="chip-bal num"><span className="muted">Mes</span><b className={balance >= 0 ? 'pos' : 'neg'}><Money value={balance} /></b></span>
         <button className="icon-btn" onClick={() => setTab('categorias')} aria-label="Categorías" title="Categorías"><Tags /></button>
       </div>

@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from 'react'
 import { LayoutDashboard, ReceiptText, CreditCard, Target, Tags, Plus } from 'lucide-react'
 import { Brand, Money } from './ui'
 import { monthName } from '../finance'
+import AppSwitcher from './AppSwitcher'
 
 export const TABS = [
   { id: 'resumen',     label: 'Resumen',      short: 'Resumen', Icon: LayoutDashboard },
@@ -19,7 +20,7 @@ export default function Nav({ active, onChange, onAdd, addLabel, month, balance 
   useLayoutEffect(() => {
     const nav = ref.current
     const place = () => {
-      const el = nav.querySelector('[aria-current=page]')
+      const el = nav.querySelector('.nav-item[aria-current=page]')
       nav.style.setProperty('--ind-o', el && el.offsetWidth ? 1 : 0)   // pestaña oculta en móvil (Categorías): sin indicador
       if (!el || !el.offsetWidth) return
       nav.style.setProperty('--ind-x', el.offsetLeft + 'px')
@@ -36,6 +37,7 @@ export default function Nav({ active, onChange, onAdd, addLabel, month, balance 
   return (
     <nav className="nav" ref={ref} aria-label="Principal">
       <div className="nav-brand"><Brand /><span>Mis Finanzas</span></div>
+      <AppSwitcher className="nav-apps" />
       <div className="nav-add">
         <button className="btn-add" onClick={onAdd} aria-label={addLabel}><Plus /><span className="nav-add-label">{addLabel}</span></button>
       </div>
