@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Undo2, Tags } from 'lucide-react'
+import { Undo2, Tags, LogOut } from 'lucide-react'
 import Nav from './components/Nav'
 import AppSwitcher from './components/AppSwitcher'
 import { Brand, Money } from './components/ui'
@@ -9,21 +9,21 @@ import Movimientos from './views/Movimientos'
 import Tarjeta from './views/Tarjeta'
 import Presupuesto from './views/Presupuesto'
 import Categorias from './views/Categorias'
-import { DEFAULT_CATS, thisMonth, monthTotals, ld, sv, peopleSummary, personKey } from './finance'
+import { thisMonth, monthTotals, peopleSummary, personKey } from './finance'
 
 const NO_FILTERS = { q: '', type: '', cat: '', month: '' }
 
-export default function App() {
+export default function App({ initial, onChange, onSignOut }) {
   const [tab, setTab] = useState('resumen')
   const [month, setMonth] = useState(thisMonth())
   const [filters, setFilters] = useState(NO_FILTERS)
 
-  const [tx, setTx] = useState(() => ld('mf_tx', []))
-  const [budgets, setBudgets] = useState(() => ld('mf_budgets', []))
-  const [cats, setCats] = useState(() => ld('mf_cats', DEFAULT_CATS))
-  const [card, setCard] = useState(() => ld('mf_card', null))
-  const [cardTx, setCardTx] = useState(() => ld('mf_card_tx', []))
-  const [cardPaid, setCardPaid] = useState(() => ld('mf_card_paid', {}))
+  const [tx, setTx] = useState(initial.tx)
+  const [budgets, setBudgets] = useState(initial.budgets)
+  const [cats, setCats] = useState(initial.cats)
+  const [card, setCard] = useState(initial.card)
+  const [cardTx, setCardTx] = useState(initial.cardTx)
+  const [cardPaid, setCardPaid] = useState(initial.cardPaid)
 
   // hojas: null = cerrada · { ... } = abierta
   const [txSheet, setTxSheet] = useState(null)         // { id }
@@ -34,12 +34,11 @@ export default function App() {
   const [toast, setToast] = useState(null)
   const toastTimer = useRef(0)
 
-  useEffect(() => { sv('mf_tx', tx) }, [tx])
-  useEffect(() => { sv('mf_budgets', budgets) }, [budgets])
-  useEffect(() => { sv('mf_cats', cats) }, [cats])
-  useEffect(() => { sv('mf_card', card) }, [card])
-  useEffect(() => { sv('mf_card_tx', cardTx) }, [cardTx])
-  useEffect(() => { sv('mf_card_paid', cardPaid) }, [cardPaid])
+  const first = useRef(true)
+  useEffect(() => {
+    if (first.current) { first.current = false; return }
+    onChange({ tx, budgets, cats, card, cardTx, cardPaid })
+  }, [tx, budgets, cats, card, cardTx, cardPaid]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { window.scrollTo({ top: 0 }) }, [tab])
 
   const getCat = useCallback((type, id) => cats[type]?.find(c => c.id === id) || { id, name: 'Sin categoría', color: '#8c919b' }, [cats])
@@ -141,6 +140,7 @@ export default function App() {
         <Brand size={30} /><AppSwitcher />
         <span className="chip-bal num"><span className="muted">Mes</span><b className={balance >= 0 ? 'pos' : 'neg'}><Money value={balance} /></b></span>
         <button className="icon-btn" onClick={() => setTab('categorias')} aria-label="Categorías" title="Categorías"><Tags /></button>
+        <button className="icon-btn" onClick={onSignOut} aria-label="Cerrar sesión" title="Cerrar sesión"><LogOut /></button>
       </div>
       <Nav active={tab} onChange={setTab} onAdd={addAction.run} addLabel={addAction.label} month={thisMonth()} balance={balance} />
 
