@@ -120,13 +120,13 @@
 .brow-foot span:last-child{margin-left:auto}
 
 /* ─── CATEGORÍAS ───────────────────────────────────────────────────────────── */
-.catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:12px}
-.catcard{position:relative;display:flex;flex-direction:column;gap:4px;padding:18px;border:1px solid var(--line);border-radius:18px;overflow:hidden;transition:transform .35s var(--snap),border-color .2s}
-.catcard:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--c) 55%,var(--line))}
-.catcard-dot{width:30px;height:30px;border-radius:10px;margin-bottom:10px;box-shadow:0 10px 22px -6px var(--c)}
-.catcard b{font-size:1.08rem}
-.catcard span.muted{font-size:.8rem}
-.catcard .icon-btn{position:absolute;top:10px;right:10px;opacity:0;transition:opacity .2s,background .2s,color .2s}
+.catgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.catcard{position:relative;display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:12px;padding:12px 44px 12px 14px;background:var(--ink-1);border:1px solid var(--line);border-radius:14px;transition:border-color .2s}
+.catcard:hover{border-color:var(--line-2)}
+.catcard-dot{grid-row:span 2;width:12px;height:12px;border-radius:50%}
+.catcard b{font-size:.92rem;font-weight:600}
+.catcard span.muted{font-size:.74rem}
+.catcard .icon-btn{position:absolute;top:50%;right:6px;transform:translateY(-50%);opacity:0;transition:opacity .2s,background .2s,color .2s}
 .catcard:hover .icon-btn,.catcard:focus-within .icon-btn{opacity:1}
 @media (hover:none){.catcard .icon-btn{opacity:.75}}
 

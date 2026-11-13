@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { LogOut, Plus, Tags, Trash2 } from 'lucide-react'
 import MonthHead from '../components/MonthHead'
 import { Empty, Seg } from '../components/ui'
-import { fmt, hexAlpha, thisMonth } from '../finance'
+import { fmt, thisMonth } from '../finance'
 
 export default function Ajustes({ user, onSignOut, cats, tx, onNew, onDelete }) {
   const [tab, setTab] = useState('expense')
@@ -49,7 +49,7 @@ export default function Ajustes({ user, onSignOut, cats, tx, onNew, onDelete }) 
           {list.map((c, i) => {
             const st = stats[tab + ':' + c.id] || { n: 0, mes: 0 }
             return (
-              <div key={c.id} className="catcard rise" style={{ '--i': i * .5 + 2, '--c': c.color, background: `linear-gradient(135deg, ${hexAlpha(c.color, .16)}, transparent 60%), var(--ink-1)` }}>
+              <div key={c.id} className="catcard rise" style={{ '--i': i * .5 + 2 }}>
                 <span className="catcard-dot" style={{ background: c.color }} />
                 <b>{c.name}</b>
                 <span className="muted num">{st.n} movimiento{st.n !== 1 ? 's' : ''}{st.mes > 0 ? ` · ${fmt(st.mes)} este mes` : ''}</span>
