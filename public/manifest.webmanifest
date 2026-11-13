@@ -1,0 +1,11 @@
+{
+  "name": "Mis Finanzas",
+  "short_name": "Finanzas",
+  "description": "Movimientos, presupuesto y tarjeta en un solo lugar",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0e0e11",
+  "theme_color": "#0e0e11",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
