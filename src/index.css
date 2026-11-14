@@ -78,12 +78,16 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 
 /* ─── SHELL ────────────────────────────────────────────────────────────────── */
 .app{min-height:100dvh;display:flex;flex-direction:column}
-.main{flex:1;min-width:0;padding:18px 16px 120px}
+.main{flex:1;min-width:0;padding:20px 16px 120px}
 .view{max-width:1120px;margin:0 auto}
 
-.topbar{display:flex;align-items:center;gap:10px;padding:max(14px,env(safe-area-inset-top)) 16px 0}
-.topbar .brand-name{font-family:var(--sans);font-weight:560;font-size:1.15rem;letter-spacing:-.02em}
-.topbar .chip-bal{margin-left:auto}
+.topbar{display:flex;align-items:center;gap:12px;height:calc(42px + max(16px,env(safe-area-inset-top)));padding:max(16px,env(safe-area-inset-top)) 16px 0;box-sizing:border-box}
+.topbar svg{flex:none}
+.topbar-name{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}
+.topbar-name b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-name small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar .icon-btn{width:40px;height:40px;flex:none}
+.topbar .icon-btn[aria-pressed=true]{background:var(--text);color:var(--ink-0)}
 
 .nav{
   position:fixed;left:0;right:0;bottom:0;z-index:40;
@@ -184,7 +188,7 @@ h1,h2,h3{font-weight:600;letter-spacing:-.01em}
 .apps a svg{width:18px;height:18px}
 .apps a:hover{color:var(--ac);background:rgba(255,255,255,.05)}
 .apps a[aria-current]{color:var(--ac);background:color-mix(in srgb,var(--ac) 16%,transparent)}
-.topbar .apps{width:112px}
+.topbar .apps{width:120px;flex:none}
 .nav-apps{display:none}
 @media (min-width:640px){.nav-apps{display:flex;flex-direction:column;margin-bottom:14px}}
 @media (min-width:1080px){.nav-apps{flex-direction:row;margin-bottom:18px}}

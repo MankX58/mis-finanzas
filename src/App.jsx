@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Undo2, Settings } from 'lucide-react'
 import Nav from './components/Nav'
 import AppSwitcher from './components/AppSwitcher'
-import { Brand, Money } from './components/ui'
+import { Brand } from './components/ui'
 import { TxSheet, BudgetSheet, CatSheet, CardSetupSheet, CardTxSheet } from './components/Sheets'
 import Resumen from './views/Resumen'
 import Movimientos from './views/Movimientos'
@@ -137,11 +137,13 @@ export default function App({ user, initial, onChange, onSignOut }) {
 
   return (
     <div className="app">
-      <div className="topbar">
-        <Brand size={30} /><AppSwitcher />
-        <span className="chip-bal num"><span className="muted">Mes</span><b className={balance >= 0 ? 'pos' : 'neg'}><Money value={balance} /></b></span>
-        <button className="icon-btn" onClick={() => setTab('ajustes')} aria-label="Ajustes" title="Ajustes" aria-pressed={tab === 'ajustes'}><Settings /></button>
-      </div>
+      {/* Header móvil común a las 3 apps: marca a la izquierda, selector de apps fijo en el borde derecho (120×42) */}
+      <header className="topbar">
+        <Brand size={36} />
+        <div className="topbar-name"><b>Mis Finanzas</b><small>Dinero y tarjeta</small></div>
+        <button className="icon-btn" onClick={() => setTab(tab === 'ajustes' ? 'resumen' : 'ajustes')} aria-label={tab === 'ajustes' ? 'Volver' : 'Ajustes'} aria-pressed={tab === 'ajustes'}><Settings /></button>
+        <AppSwitcher />
+      </header>
       <Nav active={tab} onChange={setTab} onAdd={addAction.run} addLabel={addAction.label} month={thisMonth()} balance={balance} />
 
       <main className="main">

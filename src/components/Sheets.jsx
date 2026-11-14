@@ -50,7 +50,7 @@ function TxForm({ tx, cats, onClose, onSave, onDelete }) {
   }
   return (
     <form onSubmit={submit}>
-      {!cat && <div className="field"><Seg full label="Tipo" value={type} onChange={changeType} options={[{ value: 'expense', label: '↓ Gasto', cls: 'exp' }, { value: 'income', label: '↑ Ingreso', cls: 'inc' }]} /></div>}
+      <div className="field"><Seg full label="Tipo" value={type} onChange={changeType} options={[{ value: 'expense', label: '↓ Gasto', cls: 'exp' }, { value: 'income', label: '↑ Ingreso', cls: 'inc' }]} /></div>
       <div className="field"><label htmlFor="tx-amt">Monto (COP)</label><MoneyInput id="tx-amt" autoFocus value={amount} onChange={v => { setAmount(v); setErr('') }} /></div>
       <div className="field"><span className="lbl">Categoría</span><CatPicker options={cats[type] || []} value={cat} onChange={setCat} /></div>
       <div className="field"><label htmlFor="tx-note">Nota</label><input id="tx-note" className="input" placeholder="Ej: almuerzo con el equipo" value={note} onChange={e => setNote(e.target.value)} /></div>
