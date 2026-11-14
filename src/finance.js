@@ -176,3 +176,23 @@ export function cardOverview(card, cardTx, paid, t = today()) {
   const open = cycles[curCut] || { cut: curCut, own: 0, ext: 0, items: [] }
   return { cycles, curCut, debt, due, open, daysToCut: diffDays(t, curCut), usedTotal: list.reduce((a, c) => a + c.own + c.ext, 0) }
 }
+
+// ─── CUENTAS (efectivo, bancos…) ─────────────────────────────────────────────
+// Opcionales: sin cuentas, todo funciona como siempre. Un movimiento puede llevar `account`;
+// las transferencias mueven dinero entre cuentas sin contar como ingreso ni gasto.
+export const ACCOUNT_COLORS = ['#3fb88a', '#5598e7', '#e8b04b', '#9085e9', '#d55181', '#e66767', '#4dd0e1', '#9aa3b2']
+
+/** Saldo de cada cuenta hoy: saldo inicial + ingresos − gastos ± transferencias. `''` = movimientos sin cuenta. */
+export function accountBalances(accounts, tx, transfers = []) {
+  const bal = { '': 0 }
+  for (const a of accounts) bal[a.id] = a.initial || 0
+  for (const t of tx) {
+    const k = t.account && t.account in bal ? t.account : ''
+    bal[k] += t.type === 'income' ? t.amount : -t.amount
+  }
+  for (const t of transfers) {
+    if (t.from in bal) bal[t.from] -= t.amount
+    if (t.to in bal) bal[t.to] += t.amount
+  }
+  return bal
+}

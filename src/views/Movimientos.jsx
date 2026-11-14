@@ -1,42 +1,75 @@
 import { useMemo } from 'react'
-import { Search, ReceiptText, X } from 'lucide-react'
+import { Search, ReceiptText, X, Wallet } from 'lucide-react'
 import MonthHead from '../components/MonthHead'
-import TxRow from '../components/TxRow'
+import TxRow, { TransferRow } from '../components/TxRow'
 import { Empty, Seg } from '../components/ui'
-import { fmt, dayLabel, monthTitle, thisMonth } from '../finance'
+import { fmt, fmtSigned, dayLabel, monthTitle, thisMonth } from '../finance'
 
-export default function Movimientos({ tx, cats, getCat, filters, setFilters, onEdit, onDelete, onAdd }) {
-  const { q, type, cat, month } = filters
+export default function Movimientos({ tx, transfers = [], accounts = [], balances = {}, cats, getCat, filters, setFilters, onEdit, onEditTransfer, onDelete, onAdd }) {
+  const { q, type, cat, month, acc = '' } = filters
   const set = patch => setFilters(f => ({ ...f, ...patch }))
   const options = type ? cats[type] || [] : [...(cats.income || []), ...(cats.expense || [])]
+  const hasAcc = accounts.length > 0
+  const accOf = id => accounts.find(a => a.id === id)
+  // acc: '' = todas · 'none' = sin cuenta · <id>
+  const inAcc = t => !acc || (acc === 'none' ? !accOf(t.account) : t.account === acc)
 
   const list = useMemo(() => {
     const s = q.trim().toLowerCase()
-    return [...tx]
-      .sort((a, b) => b.date.localeCompare(a.date) || Number(b.id) - Number(a.id))
+    const base = [...tx]
       .filter(t => !month || t.date.startsWith(month))
       .filter(t => !type || t.type === type)
       .filter(t => !cat || t.category === cat)
+      .filter(inAcc)
       .filter(t => !s || (t.note || '').toLowerCase().includes(s) || getCat(t.type, t.category).name.toLowerCase().includes(s))
-  }, [tx, q, type, cat, month, getCat])
+      .map(t => ({ kind: 'tx', t }))
+    // las transferencias solo aparecen cuando no se filtra por tipo ni categoría (no son ingreso ni gasto)
+    const moves = type || cat || acc === 'none' ? [] : transfers
+      .filter(t => !month || t.date.startsWith(month))
+      .filter(t => !acc || t.from === acc || t.to === acc)
+      .filter(t => !s || (t.note || 'transferencia').toLowerCase().includes(s))
+      .map(t => ({ kind: 'move', t }))
+    return [...base, ...moves].sort((a, b) => b.t.date.localeCompare(a.t.date) || Number(b.t.id) - Number(a.t.id))
+  }, [tx, transfers, q, type, cat, month, acc, getCat]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const groups = useMemo(() => {
     const g = []
     for (const t of list) {
       const last = g[g.length - 1]
-      if (last && last.date === t.date) last.items.push(t)
-      else g.push({ date: t.date, items: [t] })
+      if (last && last.date === t.t.date) last.items.push(t)
+      else g.push({ date: t.t.date, items: [t] })
     }
     return g
   }, [list])
 
-  const inc = list.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0)
-  const exp = list.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0)
-  const filtered = q || type || cat || month
+  const txs = list.filter(x => x.kind === 'tx').map(x => x.t)
+  const inc = txs.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0)
+  const exp = txs.filter(t => t.type === 'expense').reduce((a, t) => a + t.amount, 0)
+  const filtered = q || type || cat || month || acc
+  const total = Object.values(balances).reduce((a, v) => a + v, 0)
 
   return (
     <div className="view">
       <MonthHead title="Movimientos" sub="Todo lo que entra y sale, agrupado por día." />
+
+      {hasAcc && (
+        <div className="accstrip rise" style={{ '--i': 1 }} role="group" aria-label="Filtrar por cuenta">
+          <button className="acccard" aria-pressed={!acc} onClick={() => set({ acc: '' })}>
+            <span className="acccard-h"><Wallet aria-hidden="true" />Todas</span><b className="num">{fmtSigned(total)}</b>
+          </button>
+          {accounts.map(a => (
+            <button key={a.id} className="acccard" aria-pressed={acc === a.id} onClick={() => set({ acc: acc === a.id ? '' : a.id })} style={{ '--ac': a.color }}>
+              <span className="acccard-h"><i className="dot" style={{ background: a.color }} aria-hidden="true" />{a.name}</span>
+              <b className={`num ${(balances[a.id] || 0) < 0 ? 'neg' : ''}`}>{fmtSigned(balances[a.id] || 0)}</b>
+            </button>
+          ))}
+          {balances[''] !== 0 && (
+            <button className="acccard none" aria-pressed={acc === 'none'} onClick={() => set({ acc: acc === 'none' ? '' : 'none' })}>
+              <span className="acccard-h">Sin cuenta</span><b className="num">{fmtSigned(balances[''])}</b>
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="toolbar rise" style={{ '--i': 1 }}>
         <label className="search">
@@ -59,11 +92,11 @@ export default function Movimientos({ tx, cats, getCat, filters, setFilters, onE
       </div>
 
       <div className="resultbar rise" style={{ '--i': 3 }}>
-        <span>{list.length} movimiento{list.length !== 1 ? 's' : ''}</span>
+        <span>{list.length} movimiento{list.length !== 1 ? 's' : ''}{acc && hasAcc ? ` · ${acc === 'none' ? 'sin cuenta' : accOf(acc)?.name}` : ''}</span>
         <span className="spacer" />
         {inc > 0 && <span className="num pos">+{fmt(inc)}</span>}
         {exp > 0 && <span className="num neg">−{fmt(exp)}</span>}
-        {filtered && <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ q: '', type: '', cat: '', month: '' })}><X />Limpiar</button>}
+        {filtered && <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ q: '', type: '', cat: '', month: '', acc: '' })}><X />Limpiar</button>}
       </div>
 
       {groups.length === 0 ? (
@@ -73,12 +106,14 @@ export default function Movimientos({ tx, cats, getCat, filters, setFilters, onE
         </Empty></div>
       ) : (
         groups.map((g, gi) => {
-          const dayTotal = g.items.reduce((a, t) => a + (t.type === 'income' ? t.amount : -t.amount), 0)
+          const dayTotal = g.items.reduce((a, { kind, t }) => a + (kind === 'move' ? 0 : t.type === 'income' ? t.amount : -t.amount), 0)
           return (
             <section key={g.date} className="daygroup">
-              <h3 className="rise" style={{ '--i': Math.min(gi, 6) * .4 }}><span>{dayLabel(g.date)}</span><i /><em className={`num ${dayTotal >= 0 ? 'pos' : ''}`}>{dayTotal >= 0 ? '+' : '−'}{fmt(dayTotal)}</em></h3>
+              <h3 className="rise" style={{ '--i': Math.min(gi, 6) * .4 }}><span>{dayLabel(g.date)}</span><i />{g.items.some(x => x.kind === 'tx') && <em className={`num ${dayTotal >= 0 ? 'pos' : ''}`}>{dayTotal >= 0 ? '+' : '−'}{fmt(dayTotal)}</em>}</h3>
               <div className="txlist">
-                {g.items.map((t, i) => <TxRow key={t.id} i={gi + i} tx={t} cat={getCat(t.type, t.category)} onEdit={onEdit} onDelete={onDelete} />)}
+                {g.items.map(({ kind, t }, i) => kind === 'move'
+                  ? <TransferRow key={'m' + t.id} i={gi + i} t={t} from={accOf(t.from)} to={accOf(t.to)} onEdit={onEditTransfer} />
+                  : <TxRow key={t.id} i={gi + i} tx={t} cat={getCat(t.type, t.category)} account={hasAcc ? accOf(t.account) : null} onEdit={onEdit} onDelete={onDelete} />)}
               </div>
             </section>
           )

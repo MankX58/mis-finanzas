@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { CircleAlert, Trash2, Users } from 'lucide-react'
+import { CircleAlert, Trash2, Users, ArrowRight } from 'lucide-react'
 import { Sheet, MoneyInput, Seg } from './ui'
-import { SWATCHES, CARD_COLORS, today, cycleOf, payDateOf, dayShort, relDays, diffDays } from '../finance'
+import { SWATCHES, CARD_COLORS, ACCOUNT_COLORS, fmt, today, cycleOf, payDateOf, dayShort, relDays, diffDays } from '../finance'
 
 const Err = ({ children }) => children ? <p className="err" role="alert"><CircleAlert size={15} />{children}</p> : null
 
@@ -17,6 +17,27 @@ function CatPicker({ options, value, onChange }) {
   )
 }
 
+/** Chips de cuentas (efectivo, bancos…). */
+function AccountPicker({ accounts, value, onChange, label }) {
+  return (
+    <div className="catpick" role="group" aria-label={label}>
+      {accounts.map(a => (
+        <button key={a.id} type="button" className="chip" aria-pressed={value === a.id} onClick={() => onChange(a.id)}>
+          <i className="dot" style={{ background: a.color }} />{a.name}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// La última cuenta usada se propone en el siguiente movimiento (casi siempre se repite).
+const LAST_ACCOUNT = 'mf_last_account'
+const lastAccount = accounts => {
+  try { const v = localStorage.getItem(LAST_ACCOUNT); if (accounts.some(a => a.id === v)) return v } catch { /* sin storage */ }
+  return accounts[0]?.id || ''
+}
+const rememberAccount = id => { try { if (id) localStorage.setItem(LAST_ACCOUNT, id) } catch { /* sin storage */ } }
+
 const Actions = ({ onCancel, onDelete, label = 'Guardar' }) => (
   <div className="actions">
     {onDelete
@@ -27,36 +48,112 @@ const Actions = ({ onCancel, onDelete, label = 'Guardar' }) => (
 )
 
 // ─── MOVIMIENTO ──────────────────────────────────────────────────────────────
-export function TxSheet({ open, onClose, tx, cats, onSave, onDelete }) {
+export function TxSheet({ open, onClose, tx, transfer, cats, accounts = [], onSave, onDelete, onSaveTransfer, onDeleteTransfer }) {
+  const title = transfer ? 'Editar transferencia' : tx ? 'Editar movimiento' : 'Nuevo movimiento'
   return (
-    <Sheet open={open} onClose={onClose} title={tx ? 'Editar movimiento' : 'Nuevo movimiento'}>
-      <TxForm tx={tx} cats={cats} onClose={onClose} onSave={onSave} onDelete={onDelete} />
+    <Sheet open={open} onClose={onClose} title={title}>
+      <TxForm tx={tx} transfer={transfer} cats={cats} accounts={accounts} onClose={onClose} onSave={onSave} onDelete={onDelete}
+        onSaveTransfer={onSaveTransfer} onDeleteTransfer={onDeleteTransfer} />
     </Sheet>
   )
 }
-function TxForm({ tx, cats, onClose, onSave, onDelete }) {
-  const [type, setType] = useState(tx?.type || 'expense')
-  const [amount, setAmount] = useState(tx ? String(tx.amount) : '')
+function TxForm({ tx, transfer, cats, accounts, onClose, onSave, onDelete, onSaveTransfer, onDeleteTransfer }) {
+  const hasAcc = accounts.length > 0
+  const canTransfer = accounts.length >= 2 && !tx                 // un gasto ya guardado no se convierte en transferencia
+  const [type, setType] = useState(transfer ? 'transfer' : tx?.type || 'expense')
+  const [account, setAccount] = useState(tx ? tx.account || '' : lastAccount(accounts))
+  const [from, setFrom] = useState(transfer?.from || accounts[0]?.id || '')
+  const [to, setTo] = useState(transfer?.to || accounts[1]?.id || '')
+  const src = transfer || tx
+  const [amount, setAmount] = useState(src ? String(src.amount) : '')
   const [cat, setCat] = useState(tx?.category || cats[tx?.type || 'expense']?.[0]?.id || '')
-  const [note, setNote] = useState(tx?.note || '')
-  const [date, setDate] = useState(tx?.date || today())
+  const [note, setNote] = useState(src?.note || '')
+  const [date, setDate] = useState(src?.date || today())
   const [err, setErr] = useState('')
-  const changeType = t => { setType(t); setCat(cats[t]?.[0]?.id || '') }
+  const isTransfer = type === 'transfer'
+  const changeType = t => { setType(t); setErr(''); if (t !== 'transfer') setCat(cats[t]?.[0]?.id || '') }
   const submit = e => {
     e.preventDefault()
     if (!Number(amount)) return setErr('Escribe un monto mayor que cero.')
+    if (isTransfer) {
+      if (!from || !to) return setErr('Elige de qué cuenta sale y a cuál llega.')
+      if (from === to) return setErr('La cuenta de origen y la de destino deben ser distintas.')
+      return onSaveTransfer({ id: transfer?.id, from, to, amount: Number(amount), note: note.trim(), date: date || today() })
+    }
     if (!cat) return setErr('Crea una categoría primero.')
-    onSave({ id: tx?.id, type, amount: Number(amount), category: cat, note: note.trim(), date: date || today() })
+    rememberAccount(account)
+    onSave({ id: tx?.id, type, amount: Number(amount), category: cat, note: note.trim(), date: date || today(), account: account || undefined })
+  }
+  const types = [{ value: 'expense', label: '↓ Gasto', cls: 'exp' }, { value: 'income', label: '↑ Ingreso', cls: 'inc' }]
+  if (canTransfer) types.push({ value: 'transfer', label: '⇄ Mover' })
+  const nameOf = id => accounts.find(a => a.id === id)?.name || '…'
+  return (
+    <form onSubmit={submit}>
+      {!transfer && <div className="field"><Seg full label="Tipo" value={type} onChange={changeType} options={types} /></div>}
+      {isTransfer && <p className="hint">Mover dinero entre tus cuentas (por ejemplo, sacar efectivo del banco) no es un gasto ni un ingreso: solo cambia dónde está.</p>}
+      <div className="field"><label htmlFor="tx-amt">Monto (COP)</label><MoneyInput id="tx-amt" autoFocus value={amount} onChange={v => { setAmount(v); setErr('') }} /></div>
+      {isTransfer ? (
+        <>
+          <div className="field"><span className="lbl">Sale de</span><AccountPicker label="Cuenta de origen" accounts={accounts} value={from} onChange={v => { setFrom(v); setErr('') }} /></div>
+          <div className="field"><span className="lbl">Llega a</span><AccountPicker label="Cuenta de destino" accounts={accounts} value={to} onChange={v => { setTo(v); setErr('') }} /></div>
+          {from && to && from !== to && Number(amount) > 0 && <p className="hint"><b>{nameOf(from)}</b> <ArrowRight size={14} aria-hidden="true" style={{ verticalAlign: '-2px' }} /> <b>{nameOf(to)}</b> · {fmt(Number(amount))}</p>}
+        </>
+      ) : (
+        <>
+          <div className="field"><span className="lbl">Categoría</span><CatPicker options={cats[type] || []} value={cat} onChange={setCat} /></div>
+          {hasAcc && <div className="field"><span className="lbl">{type === 'income' ? '¿A qué cuenta entra?' : '¿De qué cuenta sale?'}</span>
+            <AccountPicker label="Cuenta" accounts={accounts} value={account} onChange={setAccount} /></div>}
+        </>
+      )}
+      <div className="field"><label htmlFor="tx-note">Nota</label><input id="tx-note" className="input" placeholder={isTransfer ? 'Ej: retiro en el cajero' : 'Ej: almuerzo con el equipo'} value={note} onChange={e => setNote(e.target.value)} /></div>
+      <div className="field"><label htmlFor="tx-date">Fecha</label><input id="tx-date" className="input" type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+      <Err>{err}</Err>
+      <Actions onCancel={onClose} onDelete={transfer ? () => onDeleteTransfer(transfer.id) : tx ? () => onDelete(tx.id) : null} />
+    </form>
+  )
+}
+
+// ─── CUENTA (efectivo, banco…) ───────────────────────────────────────────────
+export function AccountSheet({ open, onClose, account, unassigned, onSave, onDelete }) {
+  return (
+    <Sheet open={open} onClose={onClose} title={account ? 'Editar cuenta' : 'Nueva cuenta'}>
+      <AccountForm account={account} unassigned={unassigned} onClose={onClose} onSave={onSave} onDelete={onDelete} />
+    </Sheet>
+  )
+}
+function AccountForm({ account, unassigned, onClose, onSave, onDelete }) {
+  const [name, setName] = useState(account?.name || '')
+  const [color, setColor] = useState(account?.color || ACCOUNT_COLORS[0])
+  const [initial, setInitial] = useState(account?.initial ? String(account.initial) : '')
+  const [assign, setAssign] = useState(!account && unassigned > 0)
+  const [err, setErr] = useState('')
+  const submit = e => {
+    e.preventDefault()
+    if (!name.trim()) return setErr('Ponle un nombre, por ejemplo «Efectivo» o el nombre de tu banco.')
+    onSave({ id: account?.id, name: name.trim(), color, initial: Number(initial) || 0, assign: !account && assign })
   }
   return (
     <form onSubmit={submit}>
-      <div className="field"><Seg full label="Tipo" value={type} onChange={changeType} options={[{ value: 'expense', label: '↓ Gasto', cls: 'exp' }, { value: 'income', label: '↑ Ingreso', cls: 'inc' }]} /></div>
-      <div className="field"><label htmlFor="tx-amt">Monto (COP)</label><MoneyInput id="tx-amt" autoFocus value={amount} onChange={v => { setAmount(v); setErr('') }} /></div>
-      <div className="field"><span className="lbl">Categoría</span><CatPicker options={cats[type] || []} value={cat} onChange={setCat} /></div>
-      <div className="field"><label htmlFor="tx-note">Nota</label><input id="tx-note" className="input" placeholder="Ej: almuerzo con el equipo" value={note} onChange={e => setNote(e.target.value)} /></div>
-      <div className="field"><label htmlFor="tx-date">Fecha</label><input id="tx-date" className="input" type="date" value={date} onChange={e => setDate(e.target.value)} /></div>
+      <div className="field"><label htmlFor="a-name">Nombre</label>
+        <input id="a-name" className="input" data-af placeholder="Ej: Efectivo, Bancolombia, Nequi" value={name} onChange={e => { setName(e.target.value); setErr('') }} /></div>
+      <div className="field"><label htmlFor="a-ini">Saldo inicial</label><MoneyInput id="a-ini" value={initial} onChange={setInitial} />
+        <p className="hint">Lo que hay hoy en esta cuenta antes de anotar movimientos, para que el saldo coincida con la realidad. Puedes dejarlo en 0.</p></div>
+      <div className="field"><span className="lbl">Color</span>
+        <div className="swatches">
+          {ACCOUNT_COLORS.map(c => <button key={c} type="button" className="swatch" aria-pressed={c === color} aria-label={`Color ${c}`} style={{ background: c }} onClick={() => setColor(c)} />)}
+        </div>
+      </div>
+      {!account && unassigned > 0 && (
+        <div className="field">
+          <button type="button" className="switch" aria-pressed={assign} onClick={() => setAssign(a => !a)}>
+            <span className="knob" aria-hidden="true" />
+            <span><b>Pasar mis {unassigned} movimiento{unassigned !== 1 ? 's' : ''} actuales a esta cuenta</b>
+              <small className="muted">Útil si hasta ahora todo salía de aquí. Si no, quedan como «Sin cuenta» y puedes asignarlos después.</small></span>
+          </button>
+        </div>
+      )}
       <Err>{err}</Err>
-      <Actions onCancel={onClose} onDelete={tx ? () => onDelete(tx.id) : null} />
+      <Actions onCancel={onClose} onDelete={account ? () => onDelete(account.id) : null} label={account ? 'Guardar' : 'Crear cuenta'} />
     </form>
   )
 }

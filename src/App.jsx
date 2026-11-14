@@ -3,15 +3,15 @@ import { Undo2, Settings } from 'lucide-react'
 import Nav from './components/Nav'
 import AppSwitcher from './components/AppSwitcher'
 import { Brand } from './components/ui'
-import { TxSheet, BudgetSheet, CatSheet, CardSetupSheet, CardTxSheet } from './components/Sheets'
+import { TxSheet, BudgetSheet, CatSheet, CardSetupSheet, CardTxSheet, AccountSheet } from './components/Sheets'
 import Resumen from './views/Resumen'
 import Movimientos from './views/Movimientos'
 import Tarjeta from './views/Tarjeta'
 import Presupuesto from './views/Presupuesto'
 import Ajustes from './views/Ajustes'
-import { thisMonth, monthTotals, peopleSummary, personKey } from './finance'
+import { thisMonth, monthTotals, peopleSummary, personKey, accountBalances } from './finance'
 
-const NO_FILTERS = { q: '', type: '', cat: '', month: '' }
+const NO_FILTERS = { q: '', type: '', cat: '', month: '', acc: '' }
 
 export default function App({ user, initial, onChange, onSignOut }) {
   const [tab, setTab] = useState('resumen')
@@ -24,9 +24,12 @@ export default function App({ user, initial, onChange, onSignOut }) {
   const [card, setCard] = useState(initial.card)
   const [cardTx, setCardTx] = useState(initial.cardTx)
   const [cardPaid, setCardPaid] = useState(initial.cardPaid)
+  const [accounts, setAccounts] = useState(initial.accounts || [])     // opcional: sin cuentas, todo se ve como siempre
+  const [transfers, setTransfers] = useState(initial.transfers || [])
 
   // hojas: null = cerrada · { ... } = abierta
-  const [txSheet, setTxSheet] = useState(null)         // { id }
+  const [txSheet, setTxSheet] = useState(null)         // { id } · { transferId }
+  const [accSheet, setAccSheet] = useState(null)       // { account }
   const [budgetSheet, setBudgetSheet] = useState(null) // { budget }
   const [catSheet, setCatSheet] = useState(null)       // { type, cat? }
   const [cardSheet, setCardSheet] = useState(false)
@@ -37,13 +40,15 @@ export default function App({ user, initial, onChange, onSignOut }) {
   const first = useRef(true)
   useEffect(() => {
     if (first.current) { first.current = false; return }
-    onChange({ tx, budgets, cats, card, cardTx, cardPaid })
-  }, [tx, budgets, cats, card, cardTx, cardPaid]) // eslint-disable-line react-hooks/exhaustive-deps
+    onChange({ tx, budgets, cats, card, cardTx, cardPaid, accounts, transfers })
+  }, [tx, budgets, cats, card, cardTx, cardPaid, accounts, transfers]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { window.scrollTo({ top: 0 }) }, [tab])
 
   const getCat = useCallback((type, id) => cats[type]?.find(c => c.id === id) || { id, name: 'Sin categoría', color: '#8c919b' }, [cats])
   const people = useMemo(() => peopleSummary(cardTx), [cardTx])
   const balance = useMemo(() => monthTotals(tx, thisMonth()).bal, [tx])
+  const balances = useMemo(() => accountBalances(accounts, tx, transfers), [accounts, tx, transfers])
+  const unassigned = useMemo(() => tx.filter(t => !accounts.some(a => a.id === t.account)).length, [tx, accounts])
 
   const say = (msg, undo) => {
     clearTimeout(toastTimer.current)
@@ -67,6 +72,46 @@ export default function App({ user, initial, onChange, onSignOut }) {
     setTx(p => p.filter(t => t.id !== id))
     setTxSheet(null)
     say('Movimiento eliminado', () => setTx(p => [...p, gone]))
+  }
+
+  // ─── transferencias entre cuentas ────────────────────────────────────────────
+  const saveTransfer = t => {
+    if (t.id) setTransfers(p => p.map(x => (x.id === t.id ? { ...x, ...t } : x)))
+    else setTransfers(p => [...p, { ...t, id: Date.now().toString() }])
+    setTxSheet(null)
+    say(t.id ? 'Transferencia actualizada' : 'Dinero movido entre cuentas')
+  }
+  const deleteTransfer = id => {
+    const gone = transfers.find(t => t.id === id)
+    setTransfers(p => p.filter(t => t.id !== id))
+    setTxSheet(null)
+    say('Transferencia eliminada', () => setTransfers(p => [...p, gone]))
+  }
+
+  // ─── cuentas ─────────────────────────────────────────────────────────────────
+  const saveAccount = ({ id, name, color, initial, assign }) => {
+    if (id) {
+      setAccounts(p => p.map(a => (a.id === id ? { ...a, name, color, initial } : a)))
+      say(`Cuenta «${name}» actualizada`)
+    } else {
+      const nid = 'a' + Date.now()
+      setAccounts(p => [...p, { id: nid, name, color, initial }])
+      if (assign) setTx(p => p.map(t => (accounts.some(a => a.id === t.account) ? t : { ...t, account: nid })))
+      say(accounts.length ? `Cuenta «${name}» creada` : `Cuenta «${name}» creada · ahora cada movimiento puede ir a una cuenta`)
+    }
+    setAccSheet(null)
+  }
+  const deleteAccount = id => {
+    const gone = accounts.find(a => a.id === id)
+    const prevTx = tx, prevTransfers = transfers
+    const used = tx.filter(t => t.account === id).length
+    setAccounts(p => p.filter(a => a.id !== id))
+    setTx(p => p.map(t => (t.account === id ? { ...t, account: undefined } : t)))       // los movimientos no se borran
+    setTransfers(p => p.filter(t => t.from !== id && t.to !== id))
+    setAccSheet(null)
+    if (filters.acc === id) setFilters(f => ({ ...f, acc: '' }))
+    say(used ? `«${gone.name}» eliminada · ${used} movimiento${used > 1 ? 's quedan' : ' queda'} «Sin cuenta»` : `«${gone.name}» eliminada`,
+      () => { setAccounts(p => [...p, gone]); setTx(prevTx); setTransfers(prevTransfers) })
   }
 
   // ─── presupuestos ──────────────────────────────────────────────────────────
@@ -133,6 +178,7 @@ export default function App({ user, initial, onChange, onSignOut }) {
   }[tab] || { label: 'Nuevo movimiento', run: () => setTxSheet({ id: null }) }
 
   const editingTx = txSheet?.id ? tx.find(t => t.id === txSheet.id) : null
+  const editingTransfer = txSheet?.transferId ? transfers.find(t => t.id === txSheet.transferId) : null
   const editingCardTx = cardTxSheet?.id ? cardTx.find(t => t.id === cardTxSheet.id) : null
 
   return (
@@ -148,20 +194,24 @@ export default function App({ user, initial, onChange, onSignOut }) {
 
       <main className="main">
         <div key={tab}>
-          {tab === 'resumen' && <Resumen tx={tx} getCat={getCat} month={month} setMonth={setMonth} card={card} cardTx={cardTx} cardPaid={cardPaid}
+          {tab === 'resumen' && <Resumen tx={tx} accounts={accounts} balances={balances} getCat={getCat} month={month} setMonth={setMonth} card={card} cardTx={cardTx} cardPaid={cardPaid}
             goTo={goTo} onEdit={id => setTxSheet({ id })} onDelete={deleteTx} onAdd={() => setTxSheet({ id: null })} />}
-          {tab === 'movimientos' && <Movimientos tx={tx} cats={cats} getCat={getCat} filters={filters} setFilters={setFilters}
+          {tab === 'movimientos' && <Movimientos tx={tx} transfers={transfers} accounts={accounts} balances={balances} cats={cats} getCat={getCat} filters={filters} setFilters={setFilters}
+            onEditTransfer={id => setTxSheet({ transferId: id })} onNewAccount={() => setAccSheet({ account: null })}
             onEdit={id => setTxSheet({ id })} onDelete={deleteTx} onAdd={() => setTxSheet({ id: null })} />}
           {tab === 'tarjeta' && <Tarjeta card={card} cardTx={cardTx} cardPaid={cardPaid} getCat={getCat}
             onSetup={() => setCardSheet(true)} onAdd={() => setCardTxSheet({ id: null })} onEdit={id => setCardTxSheet({ id })} onDelete={deleteCardTx}
             onToggleSettled={toggleSettled} onSettlePerson={settlePerson} onTogglePaid={togglePaid} />}
           {tab === 'presupuesto' && <Presupuesto tx={tx} budgets={budgets} getCat={getCat} month={month} setMonth={setMonth}
             onNew={() => setBudgetSheet({ budget: null })} onEdit={b => setBudgetSheet({ budget: b })} onDelete={deleteBudget} />}
-          {tab === 'ajustes' && <Ajustes user={user} onSignOut={onSignOut} cats={cats} tx={tx} onNew={type => setCatSheet({ type })} onEdit={(type, cat) => setCatSheet({ type, cat })} onDelete={deleteCat} />}
+          {tab === 'ajustes' && <Ajustes user={user} onSignOut={onSignOut} cats={cats} tx={tx}
+            accounts={accounts} balances={balances} onNewAccount={() => setAccSheet({ account: null })} onEditAccount={a => setAccSheet({ account: a })} onNew={type => setCatSheet({ type })} onEdit={(type, cat) => setCatSheet({ type, cat })} onDelete={deleteCat} />}
         </div>
       </main>
 
-      <TxSheet open={!!txSheet} onClose={() => setTxSheet(null)} tx={editingTx} cats={cats} onSave={saveTx} onDelete={deleteTx} />
+      <TxSheet open={!!txSheet} onClose={() => setTxSheet(null)} tx={editingTx} transfer={editingTransfer} cats={cats} accounts={accounts}
+        onSave={saveTx} onDelete={deleteTx} onSaveTransfer={saveTransfer} onDeleteTransfer={deleteTransfer} />
+      <AccountSheet open={!!accSheet} onClose={() => setAccSheet(null)} account={accSheet?.account} unassigned={unassigned} onSave={saveAccount} onDelete={deleteAccount} />
       <BudgetSheet open={!!budgetSheet} onClose={() => setBudgetSheet(null)} budget={budgetSheet?.budget} cats={cats} onSave={saveBudget} />
       <CatSheet open={!!catSheet} onClose={() => setCatSheet(null)} initialType={catSheet?.type} cat={catSheet?.cat} onSave={saveCat} />
       <CardSetupSheet open={cardSheet} onClose={() => setCardSheet(false)} card={card} onSave={saveCard} />

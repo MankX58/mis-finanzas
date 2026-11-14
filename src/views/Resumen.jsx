@@ -15,7 +15,7 @@ import {
 
 const WEEKDAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-export default function Resumen({ tx, getCat, month, setMonth, card, cardTx, cardPaid, goTo, onEdit, onDelete, onAdd }) {
+export default function Resumen({ tx, accounts = [], balances = {}, getCat, month, setMonth, card, cardTx, cardPaid, goTo, onEdit, onDelete, onAdd }) {
   const [active, setActive] = useState(null)
   const now = thisMonth()
   const T = useMemo(() => monthTotals(tx, month), [tx, month])
@@ -86,6 +86,24 @@ export default function Resumen({ tx, getCat, month, setMonth, card, cardTx, car
             Anota un ingreso o un gasto y aquí aparecerán el balance, los gráficos y el ritmo del mes.
           </Empty>
         </div>
+      )}
+
+      {/* Dónde está tu dinero: solo si el usuario creó cuentas */}
+      {accounts.length > 0 && (
+        <section className="panel rise" style={{ '--i': 0, marginBottom: 16 }} aria-labelledby="where-h">
+          <div className="panel-h"><h3 id="where-h">Dónde está tu dinero</h3><span className="spacer" />
+            <button className="btn btn-ghost btn-sm" onClick={() => goTo('movimientos')}>Ver movimientos<ArrowRight /></button>
+            <p>Saldo de hoy en cada cuenta · toca una para ver sus movimientos</p>
+          </div>
+          <div className="accstrip">
+            {accounts.map(a => (
+              <button key={a.id} className="acccard" style={{ '--ac': a.color }} onClick={() => goTo('movimientos', { acc: a.id })} aria-label={`${a.name}: ${fmtSigned(balances[a.id] || 0)}. Ver sus movimientos`}>
+                <span className="acccard-h"><i className="dot" style={{ background: a.color }} aria-hidden="true" />{a.name}</span>
+                <b className={`num ${(balances[a.id] || 0) < 0 ? 'neg' : ''}`}>{fmtSigned(balances[a.id] || 0)}</b>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
       {/* Balance + tarjeta */}
@@ -220,7 +238,7 @@ export default function Resumen({ tx, getCat, month, setMonth, card, cardTx, car
           <div className="panel-h"><h3>Últimos movimientos</h3><span className="spacer" /><button className="btn btn-ghost btn-sm" onClick={() => goTo('movimientos', {})}>Ver todos</button></div>
           {recent.length === 0 ? <Empty Icon={ReceiptText} title="Sin movimientos">Usa el botón + para anotar el primero.</Empty> : (
             <div className="txlist">
-              {recent.map((t, i) => <TxRow key={t.id} i={i} tx={t} cat={getCat(t.type, t.category)} onEdit={onEdit} onDelete={onDelete} />)}
+              {recent.map((t, i) => <TxRow key={t.id} i={i} tx={t} cat={getCat(t.type, t.category)} account={accounts.find(a => a.id === t.account)} onEdit={onEdit} onDelete={onDelete} />)}
             </div>
           )}
         </section>

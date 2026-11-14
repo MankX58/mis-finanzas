@@ -6,7 +6,7 @@ import { authClient, loadState, saveState, signOutHard, Unauthorized } from './a
 import { DEFAULT_CATS, ld, sv } from './finance'
 
 // Todo usuario nuevo empieza desde cero.
-const EMPTY = { tx: [], budgets: [], cats: DEFAULT_CATS, card: null, cardTx: [], cardPaid: {} }
+const EMPTY = { tx: [], budgets: [], cats: DEFAULT_CATS, card: null, cardTx: [], cardPaid: {}, accounts: [], transfers: [] }
 
 const Splash = () => <div className="splash"><Brand size={44} /></div>
 

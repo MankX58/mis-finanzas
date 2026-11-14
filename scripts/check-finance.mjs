@@ -39,3 +39,24 @@ const p = peopleSummary(tx)
 assert.equal(p.length, 1)
 assert.deepEqual([p[0].pending, p[0].settled], [40, 60])
 console.log('finance ✓')
+
+// ─── cuentas: saldo inicial + movimientos ± transferencias; lo sin cuenta va aparte
+{
+  const { accountBalances } = await import('../src/finance.js')
+  const accounts = [{ id: 'cash', initial: 50 }, { id: 'bank', initial: 1000 }]
+  const tx = [
+    { type: 'income', amount: 500, account: 'bank' },
+    { type: 'expense', amount: 30, account: 'cash' },
+    { type: 'expense', amount: 20 },                     // sin cuenta
+    { type: 'expense', amount: 5, account: 'borrada' },  // cuenta que ya no existe → sin cuenta
+  ]
+  const transfers = [{ from: 'bank', to: 'cash', amount: 100 }]
+  const b = accountBalances(accounts, tx, transfers)
+  assert.equal(b.cash, 50 - 30 + 100)
+  assert.equal(b.bank, 1000 + 500 - 100)
+  assert.equal(b[''], -25)
+  // las transferencias no cambian el total
+  assert.equal(b.cash + b.bank + b[''], 50 + 1000 + 500 - 30 - 20 - 5)
+  assert.deepEqual(accountBalances([], [], []), { '': 0 })
+}
+console.log('check-finance: cuentas ok')

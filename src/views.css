@@ -268,7 +268,7 @@
 .settings{display:grid;gap:24px;max-width:980px}
 @media (min-width:1080px){.settings{grid-template-columns:17rem minmax(0,1fr);align-items:start}.settings .account{position:sticky;top:40px}}
 .account{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px}
-.account .avatar{width:64px;height:64px;border-radius:16px;font-size:1.5rem;color:var(--brass-ink);margin-bottom:10px}
+.account .avatar{width:64px;height:64px;border-radius:16px;font-size:1.5rem;color:var(--brass-ink);margin-bottom:10px;object-fit:cover}
 .account b{font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .account span{font-size:.8rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .account-out{width:100%;margin-top:18px;height:40px}
@@ -277,3 +277,42 @@
 .group-h{margin:0 0 8px 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
 .section-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .section-h .spacer{flex:1}
+
+/* ─── cuentas (efectivo, bancos…) ─── */
+.settings-col{display:flex;flex-direction:column;gap:28px;min-width:0}
+.acc-intro{display:flex;gap:16px;align-items:flex-start}
+.acc-intro h3{font-size:1rem;margin-bottom:4px}
+.acc-intro p{font-size:.86rem;max-width:58ch}
+.acc-intro .btn{margin-top:14px}
+.acc-intro-ico{flex:none;width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--brass) 14%,transparent);color:var(--brass)}
+.acc-intro-ico svg{width:20px;height:20px}
+.steps{margin:12px 0 0 18px;display:grid;gap:6px;font-size:.84rem;color:var(--text-2)}
+.steps li::marker{color:var(--brass);font-weight:700}
+.acc-total{font-size:.86rem}
+.acc-total b{color:var(--text)}
+.acclist{list-style:none;display:grid;gap:8px}
+.accrow{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:56px;text-align:left;background:var(--ink-1);border:1px solid var(--line);border-radius:14px;transition:border-color .2s}
+button.accrow:hover{border-color:var(--line-2)}
+.accrow .dot{width:12px;height:12px;flex:none;border-radius:50%}
+.accrow-name{flex:1;min-width:0;display:flex;flex-direction:column}
+.accrow-name b{font-weight:600;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.accrow-name small{font-size:.74rem}
+.accrow-edit{width:16px;height:16px;color:var(--muted);flex:none}
+.accrow.none{border-style:dashed;background:transparent}
+@media (max-width:520px){.acc-intro{flex-direction:column}}
+
+/* saldos por cuenta en Movimientos: tarjetas pequeñas que además filtran */
+.accstrip{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 10px;margin:0 -2px 6px;scrollbar-width:none}
+.accstrip::-webkit-scrollbar{display:none}
+.acccard{flex:none;min-width:150px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 14px;border-radius:14px;background:var(--ink-1);border:1px solid var(--line);text-align:left;transition:border-color .2s,background .2s}
+.acccard:hover{border-color:var(--line-2)}
+.acccard[aria-pressed=true]{border-color:color-mix(in srgb,var(--ac,var(--brass)) 60%,transparent);background:color-mix(in srgb,var(--ac,var(--brass)) 8%,var(--ink-1))}
+.acccard.none{border-style:dashed}
+.acccard-h{display:flex;align-items:center;gap:7px;font-size:.78rem;color:var(--text-2);font-weight:600;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acccard-h svg{width:14px;height:14px}
+.acccard-h .dot{width:9px;height:9px;border-radius:50%;flex:none}
+.acccard b{font-size:1.05rem;font-weight:600}
+.acc-tag{background:var(--ink-2);color:var(--text-2)}
+.acc-tag .dot{width:7px;height:7px;border-radius:50%}
+.transfer-ico{background:var(--ink-2);color:var(--text-2)}
+.transfer-arrow{width:12px;height:12px;color:var(--muted)}
