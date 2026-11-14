@@ -28,7 +28,7 @@ export default function App({ user, initial, onChange, onSignOut }) {
   // hojas: null = cerrada · { ... } = abierta
   const [txSheet, setTxSheet] = useState(null)         // { id }
   const [budgetSheet, setBudgetSheet] = useState(null) // { budget }
-  const [catSheet, setCatSheet] = useState(null)       // { type }
+  const [catSheet, setCatSheet] = useState(null)       // { type, cat? }
   const [cardSheet, setCardSheet] = useState(false)
   const [cardTxSheet, setCardTxSheet] = useState(null) // { id }
   const [toast, setToast] = useState(null)
@@ -84,10 +84,11 @@ export default function App({ user, initial, onChange, onSignOut }) {
   }
 
   // ─── categorías ────────────────────────────────────────────────────────────
-  const saveCat = ({ type, name, color }) => {
-    setCats(p => ({ ...p, [type]: [...(p[type] || []), { id: 'c' + Date.now(), name, color }] }))
+  const saveCat = ({ id, type, name, color }) => {
+    if (id) setCats(p => ({ ...p, [type]: p[type].map(c => (c.id === id ? { ...c, name, color } : c)) }))
+    else setCats(p => ({ ...p, [type]: [...(p[type] || []), { id: 'c' + Date.now(), name, color }] }))
     setCatSheet(null)
-    say(`Categoría «${name}» creada`)
+    say(id ? `Categoría «${name}» actualizada` : `Categoría «${name}» creada`)
   }
   const deleteCat = (type, id) => {
     const gone = cats[type].find(c => c.id === id)
@@ -154,13 +155,13 @@ export default function App({ user, initial, onChange, onSignOut }) {
             onToggleSettled={toggleSettled} onSettlePerson={settlePerson} onTogglePaid={togglePaid} />}
           {tab === 'presupuesto' && <Presupuesto tx={tx} budgets={budgets} getCat={getCat} month={month} setMonth={setMonth}
             onNew={() => setBudgetSheet({ budget: null })} onEdit={b => setBudgetSheet({ budget: b })} onDelete={deleteBudget} />}
-          {tab === 'ajustes' && <Ajustes user={user} onSignOut={onSignOut} cats={cats} tx={tx} onNew={type => setCatSheet({ type })} onDelete={deleteCat} />}
+          {tab === 'ajustes' && <Ajustes user={user} onSignOut={onSignOut} cats={cats} tx={tx} onNew={type => setCatSheet({ type })} onEdit={(type, cat) => setCatSheet({ type, cat })} onDelete={deleteCat} />}
         </div>
       </main>
 
       <TxSheet open={!!txSheet} onClose={() => setTxSheet(null)} tx={editingTx} cats={cats} onSave={saveTx} onDelete={deleteTx} />
       <BudgetSheet open={!!budgetSheet} onClose={() => setBudgetSheet(null)} budget={budgetSheet?.budget} cats={cats} onSave={saveBudget} />
-      <CatSheet open={!!catSheet} onClose={() => setCatSheet(null)} initialType={catSheet?.type} onSave={saveCat} />
+      <CatSheet open={!!catSheet} onClose={() => setCatSheet(null)} initialType={catSheet?.type} cat={catSheet?.cat} onSave={saveCat} />
       <CardSetupSheet open={cardSheet} onClose={() => setCardSheet(false)} card={card} onSave={saveCard} />
       {card && <CardTxSheet open={!!cardTxSheet} onClose={() => setCardTxSheet(null)} tx={editingCardTx} card={card} cats={cats} people={people} onSave={saveCardTx} onDelete={deleteCardTx} />}
 

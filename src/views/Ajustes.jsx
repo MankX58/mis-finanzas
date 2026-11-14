@@ -4,7 +4,7 @@ import MonthHead from '../components/MonthHead'
 import { Empty, Seg } from '../components/ui'
 import { fmt, thisMonth } from '../finance'
 
-export default function Ajustes({ user, onSignOut, cats, tx, onNew, onDelete }) {
+export default function Ajustes({ user, onSignOut, cats, tx, onNew, onEdit, onDelete }) {
   const [tab, setTab] = useState('expense')
   const month = thisMonth()
   const stats = useMemo(() => {
@@ -51,7 +51,7 @@ export default function Ajustes({ user, onSignOut, cats, tx, onNew, onDelete }) 
             return (
               <div key={c.id} className="catcard rise" style={{ '--i': i * .5 + 2 }}>
                 <span className="catcard-dot" style={{ background: c.color }} />
-                <b>{c.name}</b>
+                <button type="button" className="catcard-edit" onClick={() => onEdit(tab, c)} aria-label={`Editar ${c.name}`}><b>{c.name}</b></button>
                 <span className="muted num">{st.n} movimiento{st.n !== 1 ? 's' : ''}{st.mes > 0 ? ` · ${fmt(st.mes)} este mes` : ''}</span>
                 <button className="icon-btn danger" onClick={() => onDelete(tab, c.id)} aria-label={`Eliminar ${c.name}`}><Trash2 /></button>
               </div>

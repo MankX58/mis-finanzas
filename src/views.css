@@ -125,6 +125,10 @@
 .catcard:hover{border-color:var(--line-2)}
 .catcard-dot{grid-row:span 2;width:12px;height:12px;border-radius:50%}
 .catcard b{font-size:.92rem;font-weight:600}
+.catcard-edit{text-align:left;min-width:0}
+.catcard-edit::after{content:'';position:absolute;inset:0;border-radius:inherit}
+.catcard{cursor:pointer}
+.catcard .icon-btn{z-index:1}
 .catcard span.muted{font-size:.74rem}
 .catcard .icon-btn{position:absolute;top:50%;right:6px;transform:translateY(-50%);opacity:0;transition:opacity .2s,background .2s,color .2s}
 .catcard:hover .icon-btn,.catcard:focus-within .icon-btn{opacity:1}

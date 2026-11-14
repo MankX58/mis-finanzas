@@ -50,7 +50,7 @@ function TxForm({ tx, cats, onClose, onSave, onDelete }) {
   }
   return (
     <form onSubmit={submit}>
-      <div className="field"><Seg full label="Tipo" value={type} onChange={changeType} options={[{ value: 'expense', label: '↓ Gasto', cls: 'exp' }, { value: 'income', label: '↑ Ingreso', cls: 'inc' }]} /></div>
+      {!cat && <div className="field"><Seg full label="Tipo" value={type} onChange={changeType} options={[{ value: 'expense', label: '↓ Gasto', cls: 'exp' }, { value: 'income', label: '↑ Ingreso', cls: 'inc' }]} /></div>}
       <div className="field"><label htmlFor="tx-amt">Monto (COP)</label><MoneyInput id="tx-amt" autoFocus value={amount} onChange={v => { setAmount(v); setErr('') }} /></div>
       <div className="field"><span className="lbl">Categoría</span><CatPicker options={cats[type] || []} value={cat} onChange={setCat} /></div>
       <div className="field"><label htmlFor="tx-note">Nota</label><input id="tx-note" className="input" placeholder="Ej: almuerzo con el equipo" value={note} onChange={e => setNote(e.target.value)} /></div>
@@ -92,26 +92,26 @@ function BudgetForm({ budget, cats, onClose, onSave }) {
 }
 
 // ─── CATEGORÍA ───────────────────────────────────────────────────────────────
-export function CatSheet({ open, onClose, initialType, onSave }) {
+export function CatSheet({ open, onClose, initialType, cat, onSave }) {
   return (
-    <Sheet open={open} onClose={onClose} title="Nueva categoría">
-      <CatForm initialType={initialType} onClose={onClose} onSave={onSave} />
+    <Sheet open={open} onClose={onClose} title={cat ? 'Editar categoría' : 'Nueva categoría'}>
+      <CatForm initialType={initialType} cat={cat} onClose={onClose} onSave={onSave} />
     </Sheet>
   )
 }
-function CatForm({ initialType, onClose, onSave }) {
+function CatForm({ initialType, cat, onClose, onSave }) {
   const [type, setType] = useState(initialType || 'expense')
-  const [name, setName] = useState('')
-  const [color, setColor] = useState('#82b4f5')
+  const [name, setName] = useState(cat?.name || '')
+  const [color, setColor] = useState(cat?.color || '#82b4f5')
   const [err, setErr] = useState('')
   const submit = e => {
     e.preventDefault()
     if (!name.trim()) return setErr('Ponle un nombre a la categoría.')
-    onSave({ type, name: name.trim(), color })
+    onSave({ id: cat?.id, type, name: name.trim(), color })
   }
   return (
     <form onSubmit={submit}>
-      <div className="field"><Seg full label="Tipo" value={type} onChange={setType} options={[{ value: 'expense', label: '↓ Gasto', cls: 'exp' }, { value: 'income', label: '↑ Ingreso', cls: 'inc' }]} /></div>
+      {!cat && <div className="field"><Seg full label="Tipo" value={type} onChange={setType} options={[{ value: 'expense', label: '↓ Gasto', cls: 'exp' }, { value: 'income', label: '↑ Ingreso', cls: 'inc' }]} /></div>}
       <div className="field"><label htmlFor="c-name">Nombre</label><input id="c-name" className="input" data-af placeholder="Ej: Suscripciones" value={name} onChange={e => { setName(e.target.value); setErr('') }} /></div>
       <div className="field"><span className="lbl">Color</span>
         <div className="swatches">
@@ -120,7 +120,7 @@ function CatForm({ initialType, onClose, onSave }) {
         </div>
       </div>
       <Err>{err}</Err>
-      <Actions onCancel={onClose} label="Crear" />
+      <Actions onCancel={onClose} label={cat ? 'Guardar' : 'Crear'} />
     </form>
   )
 }

@@ -22,23 +22,38 @@ export default function Root() {
 function UserApp({ uid, user }) {
   const cacheKey = `mf:${uid}`, pendingKey = `mf:pending:${uid}`
   const [initial, setInitial] = useState(null)
+  const [rev, setRev] = useState(0) // sube cuando llegan datos de otro dispositivo → App se remonta con ellos
   const timer = useRef(0), latest = useRef(null)
+  const pending = () => ld(pendingKey, false)
 
   const push = async () => {
     clearTimeout(timer.current)
     if (!latest.current) return
-    try { await saveState(latest.current); localStorage.removeItem(pendingKey) } catch { /* sin red: queda pendiente */ }
+    try { await saveState(latest.current); localStorage.removeItem(pendingKey) } catch (e) { console.error('[finanzas] no se pudo guardar:', e) }
+  }
+
+  // Trae lo del servidor; si difiere de lo local (cambios de otro dispositivo), lo aplica.
+  const pull = async () => {
+    if (pending()) return
+    try {
+      const remote = await loadState()
+      if (pending()) return // se editó mientras cargaba
+      const s = { ...EMPTY, ...(remote || {}) }
+      if (JSON.stringify(s) !== JSON.stringify(ld(cacheKey, null))) { sv(cacheKey, s); setInitial(s); setRev(r => r + 1) }
+    } catch (e) { console.error('[finanzas] no se pudo cargar:', e) }
   }
 
   useEffect(() => {
     const local = ld(cacheKey, null)
-    if (local && ld(pendingKey, false)) { latest.current = local; setInitial(local); push(); return } // cambios sin sincronizar ganan
-    loadState()
-      .then(remote => { const s = { ...EMPTY, ...(remote || {}) }; sv(cacheKey, s); setInitial(s) })
-      .catch(() => setInitial(local || EMPTY))
-    const onHide = () => { if (document.visibilityState === 'hidden' && ld(pendingKey, false)) push() }
-    document.addEventListener('visibilitychange', onHide)
-    return () => document.removeEventListener('visibilitychange', onHide)
+    if (local) setInitial(local) // muestra la caché al instante
+    if (local && pending()) { latest.current = local; push() } // cambios sin sincronizar ganan
+    else pull().finally(() => setInitial(i => i || EMPTY))
+    const onVis = () => {
+      if (document.visibilityState === 'visible') pull()
+      else if (pending()) push()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onChange = s => {
@@ -54,5 +69,5 @@ function UserApp({ uid, user }) {
     await authClient.signOut()
   }
 
-  return initial ? <App user={user} initial={initial} onChange={onChange} onSignOut={onSignOut} /> : <Splash />
+  return initial ? <App key={rev} user={user} initial={initial} onChange={onChange} onSignOut={onSignOut} /> : <Splash />
 }
