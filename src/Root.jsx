@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import App from './App'
 import SignIn from './SignIn'
 import { Brand } from './components/ui'
-import { authClient, loadState, saveState } from './auth'
+import { authClient, loadState, saveState, signOutHard, Unauthorized } from './auth'
 import { DEFAULT_CATS, ld, sv } from './finance'
 
 // Todo usuario nuevo empieza desde cero.
@@ -29,7 +29,10 @@ function UserApp({ uid, user }) {
   const push = async () => {
     clearTimeout(timer.current)
     if (!latest.current) return
-    try { await saveState(latest.current); localStorage.removeItem(pendingKey) } catch (e) { console.error('[finanzas] no se pudo guardar:', e) }
+    try { await saveState(latest.current); localStorage.removeItem(pendingKey) } catch (e) {
+      if (e instanceof Unauthorized) return signOutHard() // lo pendiente queda en este dispositivo para el próximo inicio
+      console.error('[finanzas] no se pudo guardar:', e)
+    }
   }
 
   // Trae lo del servidor; si difiere de lo local (cambios de otro dispositivo), lo aplica.
@@ -40,7 +43,10 @@ function UserApp({ uid, user }) {
       if (pending()) return // se editó mientras cargaba
       const s = { ...EMPTY, ...(remote || {}) }
       if (JSON.stringify(s) !== JSON.stringify(ld(cacheKey, null))) { sv(cacheKey, s); setInitial(s); setRev(r => r + 1) }
-    } catch (e) { console.error('[finanzas] no se pudo cargar:', e) }
+    } catch (e) {
+      if (e instanceof Unauthorized) return signOutHard()
+      console.error('[finanzas] no se pudo cargar:', e)
+    }
   }
 
   useEffect(() => {
@@ -49,11 +55,13 @@ function UserApp({ uid, user }) {
     if (local && pending()) { latest.current = local; push() } // cambios sin sincronizar ganan
     else pull().finally(() => setInitial(i => i || EMPTY))
     const onVis = () => {
-      if (document.visibilityState === 'visible') pull()
+      if (document.visibilityState === 'visible') pull() // también re-verifica la sesión contra el servidor
       else if (pending()) push()
     }
+    const onShow = e => { if (e.persisted) window.location.reload() } // volver con «atrás» tras cerrar sesión no muestra la app cacheada
     document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
+    window.addEventListener('pageshow', onShow)
+    return () => { document.removeEventListener('visibilitychange', onVis); window.removeEventListener('pageshow', onShow) }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const onChange = s => {
@@ -66,7 +74,7 @@ function UserApp({ uid, user }) {
   const onSignOut = async () => {
     await push()
     if (!ld(pendingKey, false)) localStorage.removeItem(cacheKey) // conserva lo no sincronizado para el próximo inicio
-    await authClient.signOut()
+    await signOutHard()
   }
 
   return initial ? <App key={rev} user={user} initial={initial} onChange={onChange} onSignOut={onSignOut} /> : <Splash />
