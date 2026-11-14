@@ -264,13 +264,16 @@
   .acct+.acct{border-top:0;padding-top:0;border-left:1px solid var(--line);padding-left:24px}
 }
 
-/* ─── ajustes ─── */
-.account{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:28px}
-.account .avatar{width:44px;height:44px;font-size:1.1rem;color:var(--brass-ink)}
+/* ─── ajustes: mismo formato que Mi semestre (cuenta a la izquierda, grupos a la derecha) ─── */
+.settings{display:grid;gap:24px;max-width:980px}
+@media (min-width:1080px){.settings{grid-template-columns:17rem minmax(0,1fr);align-items:start}.settings .account{position:sticky;top:40px}}
+.account{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px}
+.account .avatar{width:64px;height:64px;border-radius:16px;font-size:1.5rem;color:var(--brass-ink);margin-bottom:10px}
+.account b{font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account span{font-size:.8rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account-out{width:100%;margin-top:18px;height:40px}
+.account-out:hover{color:var(--expense);border-color:color-mix(in srgb,var(--expense) 40%,transparent);background:color-mix(in srgb,var(--expense) 10%,transparent)}
 .grad-brass{background:linear-gradient(160deg,#f3c46a,#d9972f)}
-.account-info{flex:1;min-width:0;display:flex;flex-direction:column}
-.account-info span{font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.section-h{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.section-h h2{font-size:1.15rem}
-.section-h p{font-size:.82rem;margin-top:2px}
+.group-h{margin:0 0 8px 4px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
+.section-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .section-h .spacer{flex:1}

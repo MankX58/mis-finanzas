@@ -21,26 +21,23 @@ export default function Ajustes({ user, onSignOut, cats, tx, onNew, onEdit, onDe
 
   return (
     <div className="view">
-      <MonthHead title="Ajustes" sub="Tu cuenta y tus categorías." />
+      <MonthHead title="Ajustes" sub="Tus categorías y tu cuenta." />
 
-      <section className="panel account rise" style={{ '--i': 1 }}>
-        <span className="avatar grad-brass">{(user.name || user.email || '?').trim().charAt(0).toUpperCase()}</span>
-        <div className="account-info">
+      <div className="settings">
+        <section className="panel account rise" style={{ '--i': 1 }}>
+          <span className="avatar grad-brass">{(user.name || user.email || '?').trim().charAt(0).toUpperCase()}</span>
           <b>{user.name || 'Tu cuenta'}</b>
           <span className="muted">{user.email}</span>
-        </div>
-        <button className="btn btn-danger btn-sm" onClick={onSignOut}><LogOut />Cerrar sesión</button>
-      </section>
+          <button className="btn btn-ghost account-out" onClick={onSignOut}><LogOut />Cerrar sesión</button>
+        </section>
 
-      <div className="section-h rise" style={{ '--i': 2 }}>
-        <div>
-          <h2>Categorías</h2>
-          <p className="muted">Ponles nombre y color a tus ingresos y gastos.</p>
-        </div>
-        <span className="spacer" />
-        <Seg label="Tipo de categoría" value={tab} onChange={setTab} options={[{ value: 'expense', label: 'Gastos', cls: 'exp' }, { value: 'income', label: 'Ingresos', cls: 'inc' }]} />
-        <button className="btn btn-brass btn-sm" onClick={() => onNew(tab)}><Plus />Nueva</button>
-      </div>
+        <section className="rise" style={{ '--i': 2 }}>
+          <h2 className="group-h">Categorías</h2>
+          <div className="section-h">
+            <Seg label="Tipo de categoría" value={tab} onChange={setTab} options={[{ value: 'expense', label: 'Gastos', cls: 'exp' }, { value: 'income', label: 'Ingresos', cls: 'inc' }]} />
+            <span className="spacer" />
+            <button className="btn btn-brass btn-sm" onClick={() => onNew(tab)}><Plus />Nueva</button>
+          </div>
 
       {list.length === 0 ? (
         <div className="panel"><Empty Icon={Tags} title="Sin categorías" action={<button className="btn btn-brass" onClick={() => onNew(tab)}>Crear una</button>}>Crea la primera para poder clasificar tus movimientos.</Empty></div>
@@ -59,6 +56,8 @@ export default function Ajustes({ user, onSignOut, cats, tx, onNew, onEdit, onDe
           })}
         </div>
       )}
+        </section>
+      </div>
     </div>
   )
 }

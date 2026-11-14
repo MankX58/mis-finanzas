@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, CreditCard, HandCoins, Pencil, Plus, Trash2, User, Users, Lock, Unlock, ShoppingBag } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, CreditCard, HandCoins, Pencil, Plus, Trash2, User, Users, Lock, Unlock, ShoppingBag, X } from 'lucide-react'
 import CreditCardFace from '../components/CreditCardFace'
 import { Empty, Money } from '../components/ui'
 import { ChartPanel, Legend } from '../components/charts/kit'
@@ -20,6 +20,7 @@ const STATUS = {
 export default function Tarjeta({ card, cardTx, cardPaid, getCat, onSetup, onAdd, onEdit, onDelete, onToggleSettled, onSettlePerson, onTogglePaid }) {
   const [sel, setSel] = useState(null)
   const [filter, setFilter] = useState('all')       // all | own | ext | <personKey>
+  const [catF, setCatF] = useState('')              // '' = todas las categorías
   const [openP, setOpenP] = useState(null)
 
   const co = useMemo(() => card && cardOverview(card, cardTx, cardPaid), [card, cardTx, cardPaid])
@@ -59,8 +60,12 @@ export default function Tarjeta({ card, cardTx, cardPaid, getCat, onSetup, onAdd
   const owed = people.reduce((a, p) => a + p.pending, 0)
   const list = cyc.items
     .filter(t => filter === 'all' || (filter === 'own' ? !t.who : filter === 'ext' ? !!t.who : personKey(t.who) === filter))
+    .filter(t => !catF || t.category === catF)
     .sort((a, b) => b.date.localeCompare(a.date) || Number(b.id) - Number(a.id))
   const cyclePeople = peopleSummary(cyc.items)
+  const cycleCats = [...new Set(cyc.items.map(t => t.category))].map(id => getCat('expense', id))
+  const listTotal = list.reduce((a, t) => a + t.amount, 0)
+  const filtered = filter !== 'all' || !!catF
   const usedPct = card.limit > 0 ? Math.min(co.usedTotal / card.limit, 1) : 0
 
   return (
@@ -183,7 +188,13 @@ export default function Tarjeta({ card, cardTx, cardPaid, getCat, onSetup, onAdd
 
       {/* Compras del ciclo */}
       <section className="panel rise" style={{ '--i': 6 }}>
-        <div className="panel-h"><h3>Compras de este ciclo</h3><p>{cyc.items.length} compra{cyc.items.length !== 1 ? 's' : ''}</p></div>
+        <div className="panel-h">
+          <h3>Compras de este ciclo</h3>
+          <span className="spacer" />
+          {filtered && list.length > 0 && <b className="num">{fmt(listTotal)}</b>}
+          {filtered && <button className="btn btn-ghost btn-sm" onClick={() => { setFilter('all'); setCatF('') }}><X />Limpiar</button>}
+          <p>{filtered ? `${list.length} de ${cyc.items.length}` : cyc.items.length} compra{cyc.items.length !== 1 ? 's' : ''}</p>
+        </div>
         {cyc.items.length > 0 && (
           <div className="chips" role="group" aria-label="Filtrar compras">
             <button className="chip" aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>Todas</button>
@@ -191,6 +202,16 @@ export default function Tarjeta({ card, cardTx, cardPaid, getCat, onSetup, onAdd
             {cyclePeople.length > 0 && <button className="chip" aria-pressed={filter === 'ext'} onClick={() => setFilter('ext')}><i className="dot" style={{ background: 'var(--ext)' }} />Ajenas</button>}
             {cyclePeople.map(p => (
               <button key={p.key} className="chip" aria-pressed={filter === p.key} onClick={() => setFilter(filter === p.key ? 'all' : p.key)}><User />{p.name}</button>
+            ))}
+          </div>
+        )}
+        {cycleCats.length > 1 && (
+          <div className="chips" role="group" aria-label="Filtrar por categoría">
+            <button className="chip" aria-pressed={!catF} onClick={() => setCatF('')}>Todas las categorías</button>
+            {cycleCats.map(c => (
+              <button key={c.id} className="chip" aria-pressed={catF === c.id} onClick={() => setCatF(catF === c.id ? '' : c.id)}>
+                <i className="dot" style={{ background: c.color }} />{c.name}
+              </button>
             ))}
           </div>
         )}
