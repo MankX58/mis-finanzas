@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef } from 'react'
 import { LayoutDashboard, ReceiptText, CreditCard, Target, Settings, Plus } from 'lucide-react'
 import { Brand, Money } from './ui'
 import { monthName } from '../finance'
-import AppSwitcher from './AppSwitcher'
 
 export const TABS = [
   { id: 'resumen',     label: 'Resumen',      short: 'Resumen', Icon: LayoutDashboard },
@@ -48,7 +47,6 @@ export default function Nav({ active, onChange, onAdd, addLabel, month, balance 
   return (
     <nav className="nav" ref={ref} aria-label="Principal">
       <div className="nav-brand"><Brand /><span><b>Mis Finanzas</b><small>Dinero y tarjeta</small></span></div>
-      <AppSwitcher className="nav-apps" />
       <div className="nav-add">
         <button className="btn-add" onClick={onAdd} aria-label={addLabel}><Plus /><span className="nav-add-label">{addLabel}</span></button>
       </div>

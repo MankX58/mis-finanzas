@@ -3,6 +3,7 @@ import { LogOut, Plus, Tags, Trash2, Wallet, Pencil } from 'lucide-react'
 import MonthHead from '../components/MonthHead'
 import { Empty, Seg } from '../components/ui'
 import { fmt, fmtSigned, thisMonth } from '../finance'
+import OtherApps from '../components/OtherApps'
 
 export default function Ajustes({ user, onSignOut, cats, tx, accounts = [], balances = {}, onNewAccount, onEditAccount, onNew, onEdit, onDelete }) {
   const [tab, setTab] = useState('expense')
@@ -35,6 +36,7 @@ export default function Ajustes({ user, onSignOut, cats, tx, accounts = [], bala
           <span className="muted">
             <a href="/terminos.html" target="_blank" rel="noreferrer">Términos</a> · <a href="/privacidad.html" target="_blank" rel="noreferrer">Privacidad</a>
           </span>
+          <OtherApps />
         </section>
 
         <div className="settings-col">
