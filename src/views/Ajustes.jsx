@@ -32,6 +32,9 @@ export default function Ajustes({ user, onSignOut, cats, tx, accounts = [], bala
           <b>{user.name || 'Tu cuenta'}</b>
           <span className="muted">{user.email}</span>
           <button className="btn btn-ghost account-out" onClick={onSignOut}><LogOut />Cerrar sesión</button>
+          <span className="muted">
+            <a href="/terminos.html" target="_blank" rel="noreferrer">Términos</a> · <a href="/privacidad.html" target="_blank" rel="noreferrer">Privacidad</a>
+          </span>
         </section>
 
         <div className="settings-col">
